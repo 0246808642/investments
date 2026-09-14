@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
+import { useModoLocal } from '../../api/modoLocal';
 import { useSessao } from '../../hooks/useSessao';
 import { useAbrirConta } from '../conta';
 import { ContextoLancamento } from './contextoLancamento';
@@ -26,12 +27,31 @@ export interface ProvedorLancamentoProps {
  * Enquanto a sessao ainda esta sendo lida do IndexedDB, o clique NAO e barrado —
  * ele segue para o lancamento. Barrar por causa de um estado que ainda nao se
  * conhece mandaria para o login quem ja esta logado.
+ *
+ * Quem escolheu "usar sem conta" tambem passa: o app e offline-first, e exigir
+ * servidor para escrever no banco do proprio aparelho contradiz a premissa.
  */
 export function ProvedorLancamento({ children }: ProvedorLancamentoProps): React.JSX.Element {
   const { autenticado, carregando } = useSessao();
+  const semConta = useModoLocal();
   const abrirConta = useAbrirConta();
 
   const [aberta, setAberta] = useState(false);
+  /*
+   * Contador de aberturas, usado como `key` da folha.
+   *
+   * Fechar tem 200ms de animacao, e nesses 200ms a folha AINDA ESTA MONTADA. Se
+   * alguem tocar no gatilho de novo nesse intervalo — dois toques por
+   * impaciencia, que e o gesto mais comum depois de salvar — o `aberta` volta a
+   * true antes de o desmonte acontecer, a folha nunca desmonta e o estado
+   * interno dela sobrevive. Entre esse estado esta o cronometro de saida ja
+   * disparado, que faz `fechar()` virar no-op: a folha fica presa na tela,
+   * imune a Esc e ao botao de fechar, ate recarregar a pagina.
+   *
+   * Com a key mudando a cada abertura, reabrir SEMPRE monta uma instancia nova e
+   * limpa. O bug deixa de depender de timing porque deixa de existir.
+   */
+  const [abertura, setAbertura] = useState(0);
   // Quem abriu. No desktop o foco tem que voltar para la ao fechar, senao ele
   // cai no <body> e o proximo Tab recomeca do topo da pagina.
   const gatilho = useRef<HTMLElement | null>(null);
@@ -40,12 +60,13 @@ export function ProvedorLancamento({ children }: ProvedorLancamentoProps): React
     const ativo = document.activeElement;
     gatilho.current = ativo instanceof HTMLElement ? ativo : null;
 
-    if (!autenticado && !carregando) {
+    if (!autenticado && !carregando && !semConta) {
       abrirConta('lancamento');
       return;
     }
+    setAbertura((n) => n + 1);
     setAberta(true);
-  }, [autenticado, carregando, abrirConta]);
+  }, [autenticado, carregando, semConta, abrirConta]);
 
   const fechar = useCallback((): void => {
     setAberta(false);
@@ -64,7 +85,7 @@ export function ProvedorLancamento({ children }: ProvedorLancamentoProps): React
     <ContextoLancamento.Provider value={valor}>
       {children}
       <BotaoFlutuante aoTocar={abrir} />
-      {aberta ? <FolhaLancamento aoFechar={fechar} /> : null}
+      {aberta ? <FolhaLancamento key={abertura} aoFechar={fechar} /> : null}
     </ContextoLancamento.Provider>
   );
 }

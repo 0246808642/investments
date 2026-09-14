@@ -18,8 +18,11 @@ internal static class PoliticaDeCors
     // instancia, outro projeto — ele sobe na 5174 sem avisar, e o login passa a
     // falhar com "nao foi possivel falar com o servidor", que e exatamente a
     // mensagem que NAO aponta para CORS.
+    // 5173/5174: o dev server do Vite (ele anda para a 5174 quando a 5173 esta
+    // ocupada). 4173: o `vite preview`, que serve o build de producao localmente
+    // e e onde o app e testado antes de subir.
     public static readonly string[] OrigensPadraoDeDesenvolvimento =
-        ["http://localhost:5173", "http://localhost:5174"];
+        ["http://localhost:5173", "http://localhost:5174", "http://localhost:4173"];
 
     public static string[] LerOrigens(IConfiguration configuracao)
     {

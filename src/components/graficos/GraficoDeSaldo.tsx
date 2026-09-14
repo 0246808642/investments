@@ -247,11 +247,17 @@ export function GraficoDeSaldo({
         </div>
       ) : null}
 
+      {/*
+        Doze rotulos em 390px dao 32px cada e viram papa. No celular so os pares
+        aparecem: a escala continua legivel e a serie continua inteira.
+      */}
       <div className="mt-2 flex text-[11px] tabular-nums text-tinta-fraca">
         {serie.map((item, indice) => (
           <span
             key={item.mes}
             className={`flex-1 text-center ${
+              serie.length > 8 && indice % 2 === 1 ? 'hidden sm:block' : ''
+            } ${
               item.mes === mesSelecionado
                 ? 'font-semibold text-marca'
                 : indice === ativo

@@ -18,6 +18,21 @@ export interface ProvedorContaProps {
  */
 export function ProvedorConta({ children }: ProvedorContaProps): React.JSX.Element {
   const [motivo, setMotivo] = useState<MotivoDaConta | null>(null);
+  /*
+   * Contador de aberturas, usado como `key` da folha.
+   *
+   * Fechar tem 200ms de animacao, e nesses 200ms a folha AINDA ESTA MONTADA. Se
+   * alguem tocar no gatilho de novo nesse intervalo — dois toques por
+   * impaciencia, que e o gesto mais comum depois de salvar — o `aberta` volta a
+   * true antes de o desmonte acontecer, a folha nunca desmonta e o estado
+   * interno dela sobrevive. Entre esse estado esta o cronometro de saida ja
+   * disparado, que faz `fechar()` virar no-op: a folha fica presa na tela,
+   * imune a Esc e ao botao de fechar, ate recarregar a pagina.
+   *
+   * Com a key mudando a cada abertura, reabrir SEMPRE monta uma instancia nova e
+   * limpa. O bug deixa de depender de timing porque deixa de existir.
+   */
+  const [abertura, setAbertura] = useState(0);
   const gatilho = useRef<HTMLElement | null>(null);
 
   const guardarGatilho = useCallback((): void => {
@@ -28,6 +43,7 @@ export function ProvedorConta({ children }: ProvedorContaProps): React.JSX.Eleme
   const abrir = useCallback(
     (novoMotivo: MotivoDaConta = 'menu'): void => {
       guardarGatilho();
+      setAbertura((n) => n + 1);
       setMotivo(novoMotivo);
     },
     [guardarGatilho],
@@ -47,7 +63,9 @@ export function ProvedorConta({ children }: ProvedorContaProps): React.JSX.Eleme
   return (
     <ContextoConta.Provider value={valor}>
       {children}
-      {motivo === null ? null : <FolhaDeConta aoFechar={fechar} motivo={motivo} />}
+      {motivo === null ? null : (
+        <FolhaDeConta key={abertura} aoFechar={fechar} motivo={motivo} />
+      )}
     </ContextoConta.Provider>
   );
 }

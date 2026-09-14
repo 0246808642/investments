@@ -50,7 +50,8 @@ export function SeletorDeIdioma({ variante, className = '' }: SeletorDeIdiomaPro
             definirIdioma(escolhido);
           }
         }}
-        className={`min-w-0 flex-1 rounded-lg border-0 bg-transparent py-1 text-sm text-tinta-suave transition-colors hover:text-tinta focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marca focus-visible:ring-offset-2 ${
+        /* text-base abaixo de md: abaixo de 16px o iOS da auto-zoom ao focar. */
+        className={`min-w-0 flex-1 rounded-lg border-0 bg-transparent py-1 text-base text-tinta-suave transition-colors hover:text-tinta md:text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marca focus-visible:ring-offset-2 ${
           largo ? '' : 'max-w-[7.5rem]'
         }`}
       >

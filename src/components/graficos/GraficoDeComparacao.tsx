@@ -90,9 +90,13 @@ function Haltere({ item, teto }: HaltereProps): React.JSX.Element {
   const de = Math.min(posicao(item.anterior), posicao(item.atual));
   const ate = Math.max(posicao(item.anterior), posicao(item.atual));
 
+  // No celular a linha VIRA duas: nome em cima, trilho e numeros embaixo. As tres
+  // colunas fixas do desktop (nome 96 + valor 96 + variacao 80) somam 272px, e numa
+  // tela de 390px nao sobraria trilho nenhum — o grafico viraria duas colunas de
+  // texto com um fio no meio.
   return (
-    <li className="group flex items-center gap-3 rounded-md py-1.5 md:hover:bg-superficie-fundo">
-      <span className="flex w-24 shrink-0 items-center gap-2 md:w-28">
+    <li className="group rounded-md py-2 md:flex md:items-center md:gap-3 md:py-1.5 md:hover:bg-superficie-fundo">
+      <span className="flex items-center gap-2 md:w-28 md:shrink-0">
         <span
           aria-hidden="true"
           className="h-2.5 w-2.5 shrink-0 rounded-full"
@@ -102,7 +106,7 @@ function Haltere({ item, teto }: HaltereProps): React.JSX.Element {
       </span>
 
       <span
-        className="relative h-5 min-w-0 flex-1"
+        className="relative mt-2 block h-5 min-w-0 md:mt-0 md:inline-block md:flex-1"
         role="img"
         aria-label={`${item.nome}: ${t.estatisticas.contra(formatarMoeda(item.anterior), formatarMoeda(item.atual))}`}
       >
@@ -133,12 +137,24 @@ function Haltere({ item, teto }: HaltereProps): React.JSX.Element {
         />
       </span>
 
-      <span className="w-24 shrink-0 text-right text-sm font-medium tabular-nums text-tinta">
-        {formatarMoeda(item.atual)}
+      <span className="mt-1 flex items-baseline justify-between gap-3 md:mt-0 md:block md:w-24 md:shrink-0 md:text-right">
+        <span className="text-sm font-medium tabular-nums text-tinta">
+          {formatarMoeda(item.atual)}
+        </span>
+
+        <span
+          className={`text-xs tabular-nums md:hidden ${
+            diferenca === 0 ? 'text-tinta-fraca' : subiu ? 'text-saida' : 'text-entrada'
+          }`}
+        >
+          {diferenca === 0
+            ? '—'
+            : `${subiu ? '+' : MENOS}${formatarMoeda(centavos(Math.abs(diferenca)))}`}
+        </span>
       </span>
 
       <span
-        className={`w-20 shrink-0 text-right text-xs tabular-nums ${
+        className={`hidden w-20 shrink-0 text-right text-xs tabular-nums md:block ${
           diferenca === 0 ? 'text-tinta-fraca' : subiu ? 'text-saida' : 'text-entrada'
         }`}
       >

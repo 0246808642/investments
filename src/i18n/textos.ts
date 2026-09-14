@@ -266,6 +266,13 @@ const ptBR = {
     sair: 'Sair da conta',
     contaDe: (email: string) => `Conta de ${email}`,
     precisaEntrar: 'Entre na sua conta para registrar lançamentos.',
+    usarSemConta: 'Usar sem conta neste aparelho',
+    semContaExplicacao:
+      'Os lançamentos ficam só aqui, sem cópia no servidor. Dá para criar a conta depois, a qualquer momento.',
+    modoLocal: 'Usando sem conta',
+    modoLocalDetalhe:
+      'Seus lançamentos estão guardados só neste aparelho. Entre numa conta para levá-los para outro.',
+    voltarAExigirConta: 'Voltar a exigir conta',
     erroGenerico: 'Não foi possível concluir. Tente de novo.',
     erroRede: 'Não foi possível falar com o servidor. Verifique a conexão e tente de novo.',
     erroCredenciais: 'E-mail ou senha incorretos.',
@@ -547,6 +554,13 @@ const en: Textos = {
     sair: 'Sign out',
     contaDe: (email) => `Account of ${email}`,
     precisaEntrar: 'Sign in to record entries.',
+    usarSemConta: 'Use without an account on this device',
+    semContaExplicacao:
+      'Entries stay here only, with no copy on the server. You can create the account later, at any time.',
+    modoLocal: 'Using without an account',
+    modoLocalDetalhe:
+      'Your entries are stored on this device only. Sign in to an account to take them to another.',
+    voltarAExigirConta: 'Require an account again',
     erroGenerico: 'Could not complete. Try again.',
     erroRede: 'Could not reach the server. Check your connection and try again.',
     erroCredenciais: 'Wrong email or password.',
@@ -820,6 +834,13 @@ const es: Textos = {
     sair: 'Salir de la cuenta',
     contaDe: (email) => `Cuenta de ${email}`,
     precisaEntrar: 'Entra en tu cuenta para registrar movimientos.',
+    usarSemConta: 'Usar sin cuenta en este dispositivo',
+    semContaExplicacao:
+      'Los movimientos se quedan solo aquí, sin copia en el servidor. Puedes crear la cuenta después, en cualquier momento.',
+    modoLocal: 'Usando sin cuenta',
+    modoLocalDetalhe:
+      'Tus movimientos están guardados solo en este dispositivo. Entra en una cuenta para llevarlos a otro.',
+    voltarAExigirConta: 'Volver a exigir cuenta',
     erroGenerico: 'No se pudo completar. Inténtalo de nuevo.',
     erroRede: 'No se pudo contactar con el servidor. Comprueba la conexión e inténtalo de nuevo.',
     erroCredenciais: 'Correo o contraseña incorrectos.',

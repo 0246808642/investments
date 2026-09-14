@@ -35,11 +35,11 @@ export function NavegacaoInferior({ rota }: NavegacaoInferiorProps): React.JSX.E
               <a
                 href={item.href}
                 aria-current={ativo ? 'page' : undefined}
-                className={`flex min-h-toque items-center justify-center px-1 py-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marca focus-visible:ring-inset ${
+                className={`flex min-h-toque items-center justify-center px-0.5 py-3 text-[11px] font-medium leading-tight transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marca focus-visible:ring-inset ${
                   ativo ? 'text-marca' : 'text-tinta-suave'
                 }`}
               >
-                <span className="truncate">{item.rotulo}</span>
+                <span className="text-center">{item.rotulo}</span>
               </a>
             </li>
           );

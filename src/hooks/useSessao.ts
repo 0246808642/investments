@@ -2,6 +2,7 @@ import { useCallback, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 
 import { entrarNoServidor, registrarNoServidor } from '../api/cliente';
+import { definirModoLocal } from '../api/modoLocal';
 import type { FalhaApi } from '../api/erros';
 import { ehErroApi } from '../api/erros';
 import { lerSessao, limparSessao, salvarSessaoDeLogin, sessaoExpirada } from '../api/sessao';
@@ -70,6 +71,10 @@ export function useSessao(): EstadoDaSessao {
           email,
           persistente: manterConectado,
         });
+        // Entrou: o "usar sem conta" deixa de fazer sentido e sai do caminho.
+        // Mante-lo ligado manteria o portao aberto depois de um logout futuro,
+        // que e exatamente o contrario do que a pessoa escolheu ao entrar.
+        definirModoLocal(false);
         return { ok: true };
       } catch (erro) {
         if (!ehErroApi(erro)) {

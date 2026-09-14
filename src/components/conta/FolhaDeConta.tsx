@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type * as React from 'react';
 
+import { definirModoLocal, useModoLocal } from '../../api/modoLocal';
 import { useSessao } from '../../hooks/useSessao';
 import { useTravaScroll } from '../../hooks/useTravaScroll';
 import { useTextos } from '../../i18n';
@@ -30,6 +31,7 @@ export interface FolhaDeContaProps {
  */
 export function FolhaDeConta({ aoFechar, motivo = 'menu' }: FolhaDeContaProps): React.JSX.Element {
   const { sessao, carregando, sair } = useSessao();
+  const semConta = useModoLocal();
   const t = useTextos();
 
   const [visivel, setVisivel] = useState(false);
@@ -131,6 +133,26 @@ export function FolhaDeConta({ aoFechar, motivo = 'menu' }: FolhaDeContaProps): 
         <div className="px-4 pt-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] md:px-5 md:pb-6">
           {carregando ? (
             <div className="h-56 animate-pulse rounded-lg bg-superficie-fundo" aria-hidden="true" />
+          ) : sessao === null && semConta ? (
+            <div className="space-y-5">
+              <div className="space-y-1">
+                <h2 className="text-base font-medium text-tinta">{t.conta.modoLocal}</h2>
+                <p className="text-rotulo text-tinta-suave">{t.conta.modoLocalDetalhe}</p>
+              </div>
+
+              <FormularioDeConta modoInicial="entrar" aoConcluir={fechar} />
+
+              <button
+                type="button"
+                onClick={() => {
+                  definirModoLocal(false);
+                  fechar();
+                }}
+                className={`${BOTAO_TEXTO} w-full border border-superficie-forte py-2.5 text-center`}
+              >
+                {t.conta.voltarAExigirConta}
+              </button>
+            </div>
           ) : sessao === null ? (
             <>
               {motivo === 'lancamento' ? (
@@ -139,6 +161,29 @@ export function FolhaDeConta({ aoFechar, motivo = 'menu' }: FolhaDeContaProps): 
                 </p>
               ) : null}
               <FormularioDeConta modoInicial="entrar" aoConcluir={fechar} focarAoMontar />
+
+              {/*
+                A saida sem conta fica DEPOIS do formulario e em peso menor: ela
+                existe para nao travar quem esta sem rede, nao para competir com o
+                caminho que leva os dados para outro aparelho.
+              */}
+              {semConta ? null : (
+                <div className="mt-5 border-t border-superficie-borda pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      definirModoLocal(true);
+                      fechar();
+                    }}
+                    className={`${BOTAO_TEXTO} w-full py-2 text-center`}
+                  >
+                    {t.conta.usarSemConta}
+                  </button>
+                  <p className="mt-1 text-center text-rotulo text-tinta-fraca">
+                    {t.conta.semContaExplicacao}
+                  </p>
+                </div>
+              )}
             </>
           ) : (
             <div className="space-y-5">

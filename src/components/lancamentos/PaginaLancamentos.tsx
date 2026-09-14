@@ -113,7 +113,9 @@ export function PaginaLancamentos(): React.JSX.Element {
               onChange={(evento) => {
                 setCategoriaId(evento.target.value);
               }}
-              className={`min-h-toque w-full rounded-lg border border-superficie-borda bg-superficie px-3 text-sm text-tinta md:min-h-0 md:py-2 ${ANEL_FOCO}`}
+              /* text-base abaixo de md e obrigatorio: com fonte menor que 16px
+                 o iOS da auto-zoom ao focar o campo e a tela fica torta. */
+              className={`min-h-toque w-full rounded-lg border border-superficie-borda bg-superficie px-3 text-base text-tinta md:min-h-0 md:py-2 md:text-sm ${ANEL_FOCO}`}
             >
               <option value="todas">{t.extrato.todasCategorias}</option>
               {(categorias ?? []).map((categoria) => (
