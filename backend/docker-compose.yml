@@ -1,0 +1,22 @@
+# Postgres de desenvolvimento. A porta 5433 evita colidir com uma instalacao
+# local na 5432, se um dia existir.
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: financeiro-postgres
+    environment:
+      POSTGRES_DB: financeiro
+      POSTGRES_USER: financeiro
+      POSTGRES_PASSWORD: financeiro_dev
+    ports:
+      - '5433:5432'
+    volumes:
+      - financeiro-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U financeiro -d financeiro']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  financeiro-pgdata:

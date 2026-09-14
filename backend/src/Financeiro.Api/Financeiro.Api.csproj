@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>dfaa7db3-b862-4995-9507-0bba5cb2f076</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.12" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Financeiro.Application\Financeiro.Application.csproj" />
+    <ProjectReference Include="..\Financeiro.Infrastructure\Financeiro.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

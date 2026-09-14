@@ -1,0 +1,19 @@
+<Project>
+  <!--
+    Disciplina equivalente a do frontend. La o contrato e "sem any, sem ! para
+    calar o compilador"; aqui e nullable habilitado com aviso virando erro —
+    a mesma ideia: o compilador nao pode ser silenciado, ele tem que ser
+    convencido. Referencia anulavel nao checada vira falha de build, nao
+    comentario de code review.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+</Project>
