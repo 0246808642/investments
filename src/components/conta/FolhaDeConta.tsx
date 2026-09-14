@@ -5,6 +5,7 @@ import { definirModoLocal, useModoLocal } from '../../api/modoLocal';
 import { useSessao } from '../../hooks/useSessao';
 import { useTravaScroll } from '../../hooks/useTravaScroll';
 import { useTextos } from '../../i18n';
+import { NOME_DO_APP } from '../../marca';
 import { FormularioDeConta } from './FormularioDeConta';
 import { MarcaDoApp } from './MarcaDoApp';
 import { ANEL_FOCO, BOTAO_TEXTO } from './estilos';
@@ -106,7 +107,7 @@ export function FolhaDeConta({ aoFechar, motivo = 'menu' }: FolhaDeContaProps): 
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-marca text-marca-contraste">
               <MarcaDoApp className="h-4 w-4" />
             </span>
-            <span className="truncate text-sm font-semibold text-tinta">Financeiro</span>
+            <span className="truncate text-sm font-semibold text-tinta">{NOME_DO_APP}</span>
           </p>
 
           <button

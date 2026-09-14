@@ -1,5 +1,6 @@
 import type * as React from 'react';
 
+import { NOME_DO_APP } from '../../marca';
 import type { Rota } from '../../rotas/rotas';
 import { useAbrirAlertas } from '../alertas';
 import { BotaoDeConta } from '../conta';
@@ -7,9 +8,6 @@ import { BotaoDeTema } from './BotaoDeTema';
 import { useItensNav } from './navegacao';
 import { SeletorDeIdioma } from './SeletorDeIdioma';
 import { useTextos } from '../../i18n';
-
-/** Nome do produto. Fonte unica: <title> do index.html. */
-const NOME_APP = 'Financeiro';
 
 interface BarraSuperiorProps {
   /** Acao primaria (novo lancamento), a direita. `null` = so o titulo. */
@@ -37,7 +35,7 @@ export function BarraSuperior({ acao, rota }: BarraSuperiorProps): React.JSX.Ele
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-superficie-borda bg-superficie-fundo/95 px-4 py-3 backdrop-blur-sm sm:px-5 md:px-6 lg:hidden">
       <div className="flex min-w-0 items-center gap-5">
-        <p className="shrink-0 text-sm font-semibold text-tinta">{NOME_APP}</p>
+        <p className="shrink-0 text-sm font-semibold text-tinta">{NOME_DO_APP}</p>
 
         <nav aria-label={t.navegacao.secoes} className="hidden md:block">
           <ul className="flex items-center gap-1">

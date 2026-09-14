@@ -1,6 +1,6 @@
 {
-  "name": "Financeiro",
-  "short_name": "Financeiro",
+  "name": "Investments",
+  "short_name": "Investments",
   "description": "Controle de entradas e saídas, com limite de gastos e aviso quando o limite estoura.",
   "start_url": "/",
   "scope": "/",

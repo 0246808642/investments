@@ -13,6 +13,7 @@ import {
 } from '../../db/consultas';
 import type { Categoria, DataISO, MesISO, Transacao } from '../../types';
 import { idiomaAtual, useTextos } from '../../i18n';
+import { NOME_DO_APP } from '../../marca';
 import type { Textos } from '../../i18n';
 import {
   MENOS,
@@ -77,7 +78,7 @@ export function FolhaDeImpressao({ mes, aoFicarPronta }: FolhaDeImpressaoProps):
     <div className="so-impressao">
       <header className="impressao-cabecalho">
         <div>
-          <p className="impressao-marca">Financeiro</p>
+          <p className="impressao-marca">{NOME_DO_APP}</p>
           <h1 className="impressao-titulo">{t.impressao.extratoDe(formatarMesTitulo(mes))}</h1>
         </div>
         <p className="impressao-meta">

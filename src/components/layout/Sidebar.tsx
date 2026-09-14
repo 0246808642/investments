@@ -1,5 +1,6 @@
 import type * as React from 'react';
 
+import { NOME_DO_APP } from '../../marca';
 import type { Rota } from '../../rotas/rotas';
 import { useAbrirAlertas } from '../alertas';
 import { BotaoDeConta } from '../conta';
@@ -7,9 +8,6 @@ import { BotaoDeTema } from './BotaoDeTema';
 import { useItensNav } from './navegacao';
 import { SeletorDeIdioma } from './SeletorDeIdioma';
 import { useTextos } from '../../i18n';
-
-/** Nome do produto. Fonte unica: <title> do index.html. */
-const NOME_APP = 'Financeiro';
 
 interface SidebarProps {
   /**
@@ -37,7 +35,7 @@ export function Sidebar({ acao, rota }: SidebarProps): React.JSX.Element {
 
   return (
     <aside className="hidden border-r border-superficie-borda bg-superficie-fundo px-4 py-5 lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col">
-      <p className="px-3 text-sm font-semibold text-tinta">{NOME_APP}</p>
+      <p className="px-3 text-sm font-semibold text-tinta">{NOME_DO_APP}</p>
 
       {acao === null ? null : <div className="mt-5 [&>*]:w-full">{acao}</div>}
 
