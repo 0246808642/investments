@@ -1,3 +1,5 @@
+import { idiomaAtual } from '../i18n/idiomas';
+
 /**
  * Data e sempre a string 'YYYY-MM-DD'. Nunca um objeto Date no banco: Date
  * carrega hora e fuso, serializa diferente entre navegadores e desloca o dia
@@ -96,39 +98,90 @@ export function mesSeguinte(mes: MesISO): MesISO {
   return mesDe(deComponentesLocais(new Date(ano ?? 1970, numeroDoMes ?? 1, 1)));
 }
 
-const formatadorDiaEMes = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short' });
-const formatadorComSemana = new Intl.DateTimeFormat('pt-BR', {
-  weekday: 'short',
-  day: '2-digit',
-  month: 'short',
-});
-const formatadorMesExtenso = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' });
+/**
+ * Formatadores por idioma, criados sob demanda e guardados.
+ *
+ * `new Intl.DateTimeFormat` custa caro e estas funcoes sao chamadas em laco — uma
+ * lista de sessenta lancamentos chama `formatarDataCurta` sessenta vezes. O cache
+ * e por (idioma + forma), entao trocar o idioma nao invalida nada: a entrada
+ * antiga continua valida para quando a pessoa voltar.
+ */
+const formatadores = new Map<string, Intl.DateTimeFormat>();
 
-/** '2026-09-14' -> "14/09" */
+function formatador(chave: string, opcoes: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+  const idioma = idiomaAtual();
+  const completa = `${idioma}:${chave}`;
+  let guardado = formatadores.get(completa);
+  if (guardado === undefined) {
+    guardado = new Intl.DateTimeFormat(idioma, opcoes);
+    formatadores.set(completa, guardado);
+  }
+  return guardado;
+}
+
+/**
+ * '2026-09-14' -> "14/09" em portugues e espanhol, "09/14" em ingles.
+ *
+ * Passou a usar Intl em vez de fatiar a string: dia e mes trocam de ordem entre
+ * os idiomas, e "09/14" lido como 9 de setembro por um brasileiro — ou 14 de
+ * setembro por um americano — e um erro silencioso num campo de data.
+ */
 export function formatarDataCurta(data: DataISO): string {
-  return `${data.slice(8, 10)}/${data.slice(5, 7)}`;
+  return formatador('curta', { day: '2-digit', month: '2-digit' }).format(paraDateLocal(data));
 }
 
-/** '2026-09-14' -> "14 de set." */
+/** '2026-09-14' -> "14 de set." / "Sep 14" / "14 sept" */
 export function formatarDiaEMes(data: DataISO): string {
-  return formatadorDiaEMes.format(paraDateLocal(data));
+  return formatador('diaEMes', { day: '2-digit', month: 'short' }).format(paraDateLocal(data));
 }
 
-/** '2026-09-14' -> "seg., 14 de set." */
+/** '2026-09-14' -> "seg., 14 de set." / "Mon, Sep 14" / "lun, 14 sept" */
 export function formatarDataComSemana(data: DataISO): string {
-  return formatadorComSemana.format(paraDateLocal(data));
+  return formatador('comSemana', { weekday: 'short', day: '2-digit', month: 'short' }).format(
+    paraDateLocal(data),
+  );
 }
 
-/** '2026-09' -> "setembro de 2026" */
+/** '2026-09' -> "setembro de 2026" / "September 2026" / "septiembre de 2026" */
 export function formatarMesExtenso(mes: MesISO): string {
-  return formatadorMesExtenso.format(paraDateLocal(primeiroDiaDoMes(mes)));
+  return formatador('mesExtenso', { month: 'long', year: 'numeric' }).format(
+    paraDateLocal(primeiroDiaDoMes(mes)),
+  );
 }
 
 /**
  * '2026-09' -> "Setembro de 2026". Existe porque a classe `capitalize` do CSS
  * sobe a inicial de TODA palavra e produz "Setembro De 2026".
+ *
+ * Em ingles o Intl ja devolve "September 2026" com maiuscula, e subir de novo o
+ * que ja esta em caixa alta nao muda nada — a funcao serve aos tres idiomas.
  */
 export function formatarMesTitulo(mes: MesISO): string {
   const extenso = formatarMesExtenso(mes);
-  return extenso.charAt(0).toLocaleUpperCase('pt-BR') + extenso.slice(1);
+  return extenso.charAt(0).toLocaleUpperCase(idiomaAtual()) + extenso.slice(1);
+}
+
+/** '2026-09' -> "set." / "Sep" / "sept". Rotulo da trilha, onde o nome inteiro nao cabe. */
+export function formatarMesAbreviado(mes: MesISO): string {
+  return formatador('mesAbreviado', { month: 'short' }).format(paraDateLocal(primeiroDiaDoMes(mes)));
+}
+
+/** '2026-09' -> "setembro" / "September" / "septiembre". Sem o ano: ele ja esta no titulo. */
+export function formatarMesNome(mes: MesISO): string {
+  return formatador('mesNome', { month: 'long' }).format(paraDateLocal(primeiroDiaDoMes(mes)));
+}
+
+/**
+ * Desloca a data em dias. Passa por Date local de propósito: somar 1 ao campo
+ * "dia" da string erraria a virada de mes, de ano e de horario de verao.
+ */
+export function somarDias(data: DataISO, dias: number): DataISO {
+  const referencia = paraDateLocal(data);
+  referencia.setDate(referencia.getDate() + dias);
+  return deComponentesLocais(referencia);
+}
+
+/** Atalho legivel para o chip "Ontem" do formulario de lancamento. */
+export function ontem(): DataISO {
+  return somarDias(hoje(), -1);
 }

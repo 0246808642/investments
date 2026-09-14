@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Financeiro">
+  <rect width="512" height="512" rx="112" fill="#0f172a"/>
+  <!-- Barras do resultado mensal: a mesma leitura da trilha da tela inicial. -->
+  <rect x="116" y="286" width="54" height="76" rx="12" fill="#af3029"/>
+  <rect x="198" y="242" width="54" height="120" rx="12" fill="#af3029"/>
+  <rect x="280" y="196" width="54" height="166" rx="12" fill="#047857"/>
+  <rect x="362" y="142" width="54" height="220" rx="12" fill="#047857"/>
+</svg>

@@ -1,0 +1,21 @@
+{
+  "name": "Financeiro",
+  "short_name": "Financeiro",
+  "description": "Controle de entradas e saídas, com limite de gastos e aviso quando o limite estoura.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "background_color": "#f7f8fa",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "/icone.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

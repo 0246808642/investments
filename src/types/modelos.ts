@@ -30,7 +30,19 @@ export interface Categoria extends BaseEntity {
   tipo: TipoMovimento;
   /** Hex '#rrggbb'. Cor de dado, aplicada inline — Tailwind nao gera classe dinamica. */
   cor: string;
+  /**
+   * Sobe a categoria para o inicio da grade do formulario de lancamento.
+   * E ordenacao, nao filtro: a nao-favorita continua la embaixo, inteira.
+   */
+  favorita: boolean;
 }
+
+/**
+ * Teto de categorias POR TIPO. Existe para a grade do lancamento continuar
+ * escolhivel de relance: acima de nove, escolher vira leitura de lista, e o
+ * lancamento de dez segundos deixa de ser de dez segundos.
+ */
+export const MAXIMO_DE_CATEGORIAS = 9;
 
 export function ehEntrada(tipo: TipoMovimento): boolean {
   return tipo === 'entrada';

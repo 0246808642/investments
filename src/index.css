@@ -1,3 +1,339 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * A paleta inteira vive aqui, como variavel CSS, e o tailwind.config.js so
+ * aponta para ela. E o que torna o tema escuro uma troca de valores em vez de
+ * uma segunda classe em cada elemento do app: nenhum componente precisa saber
+ * que existe modo escuro.
+ *
+ * O formato e "R G B" sem funcao, e nao "#rrggbb", porque o Tailwind monta
+ * `rgb(var(--token) / <alpha-value>)` — sem os canais separados, utilitarios
+ * com opacidade (bg-tinta/40, ring-marca/50) parariam de funcionar.
+ *
+ * REGRA ao mexer: o papel de cada token e o mesmo nos dois temas. `superficie`
+ * e sempre "o card", `superficie-fundo` e sempre "atras do card". No claro o
+ * card e mais CLARO que o fundo; no escuro ele e mais CLARO tambem — e por isso
+ * que o degrau continua lendo como elevacao, e nao porque o hex e branco.
+ */
+@layer base {
+  :root {
+    color-scheme: light;
+
+    --entrada: 4 120 87;
+    --entrada-forte: 6 95 70;
+    --entrada-suave: 237 248 243;
+    --entrada-borda: 183 227 208;
+
+    --saida: 175 48 41;
+    --saida-forte: 143 36 30;
+    --saida-suave: 251 241 240;
+    --saida-borda: 235 201 197;
+    --saida-calor1: 251 241 240;
+    --saida-calor2: 243 217 214;
+    --saida-calor3: 227 172 166;
+    --saida-calor4: 201 117 108;
+
+    --superficie: 255 255 255;
+    --superficie-fundo: 247 248 250;
+    --superficie-borda: 228 231 236;
+    --superficie-forte: 208 213 221;
+
+    --tinta: 15 23 42;
+    --tinta-suave: 78 90 110;
+    --tinta-fraca: 138 148 166;
+    --tinta-forte: 30 41 59;
+
+    /* Accent de marca e AGORA tambem a cor do botao primario. Indigo vivido:
+       6,1:1 com texto branco em cima, e destaca a acao sem recorrer a vermelho
+       ou verde, que neste app significam dinheiro saindo e entrando. */
+    --marca: 79 70 229;
+    --marca-forte: 67 56 202;
+    --marca-suave: 238 242 255;
+    --marca-borda: 199 210 254;
+    /* Texto que vai EM CIMA de bg-marca. Existe como token proprio para o tema
+       escuro poder escurecer em vez de clarear. */
+    --marca-contraste: 255 255 255;
+
+    --categoria-1: 79 70 229;
+    --categoria-2: 14 116 144;
+    --categoria-3: 124 58 237;
+    --categoria-4: 190 24 93;
+    --categoria-5: 180 83 9;
+    --categoria-6: 87 83 78;
+    --categoria-outros: 148 163 184;
+  }
+
+  /*
+   * Tema escuro. Nao e o claro invertido: as cores de dinheiro sobem de
+   * luminosidade (verde e vermelho escuros somem sobre fundo escuro) e a rampa
+   * de calor do calendario e RECONSTRUIDA subindo a partir do fundo, em vez de
+   * descer a partir do branco — uma rampa clara sobre fundo escuro leria ao
+   * contrario, com o dia de maior gasto parecendo o mais apagado.
+   */
+  :root[data-tema='escuro'] {
+    color-scheme: dark;
+
+    --entrada: 52 211 153;
+    --entrada-forte: 110 231 183;
+    --entrada-suave: 6 44 34;
+    --entrada-borda: 6 78 59;
+
+    --saida: 248 113 113;
+    --saida-forte: 252 165 165;
+    --saida-suave: 51 17 17;
+    --saida-borda: 100 32 32;
+    --saida-calor1: 45 20 22;
+    --saida-calor2: 76 28 31;
+    --saida-calor3: 122 42 45;
+    --saida-calor4: 175 58 58;
+
+    --superficie: 24 28 40;
+    --superficie-fundo: 15 18 27;
+    --superficie-borda: 42 48 64;
+    --superficie-forte: 66 74 95;
+
+    --tinta: 237 240 247;
+    --tinta-suave: 160 169 187;
+    --tinta-fraca: 116 126 146;
+    --tinta-forte: 255 255 255;
+
+    --marca: 129 122 255;
+    --marca-forte: 155 149 255;
+    --marca-suave: 32 33 66;
+    --marca-borda: 64 62 122;
+    /* Sobre o indigo claro do tema escuro, texto quase-preto le melhor que branco. */
+    --marca-contraste: 15 18 27;
+
+    --categoria-1: 129 140 248;
+    --categoria-2: 34 211 238;
+    --categoria-3: 167 139 250;
+    --categoria-4: 244 114 182;
+    --categoria-5: 251 191 36;
+    --categoria-6: 168 162 158;
+    --categoria-outros: 148 163 184;
+  }
+
+  /*
+   * Troca de tema sem transicao. Animar background-color em centenas de
+   * elementos ao mesmo tempo produz um clarao arrastado de varios quadros; o
+   * corte seco le como "trocou", que e exatamente o que aconteceu.
+   */
+  :root[data-trocando-tema] *,
+  :root[data-trocando-tema] *::before,
+  :root[data-trocando-tema] *::after {
+    transition: none !important;
+  }
+}
+
+/*
+ * ------------------------------------------------------------------------
+ * Impressao — a folha que vira PDF
+ * ------------------------------------------------------------------------
+ *
+ * O gerador de PDF e o proprio navegador. Ele quebra pagina sozinho, respeita o
+ * papel escolhido e mantem o texto selecionavel; o que faltava era uma folha que
+ * valesse a pena imprimir. Estas regras sao essa folha.
+ */
+.so-impressao {
+  display: none;
+}
+
+@media print {
+  /*
+   * Tema claro a forca, inclusive para quem usa o app no escuro. Imprimir fundo
+   * quase preto gasta tinta, sai cinza no papel e nao e o que ninguem quer de um
+   * extrato. A especificidade precisa empatar com `:root[data-tema='escuro']`,
+   * por isso o seletor duplicado.
+   */
+  :root,
+  :root[data-tema='escuro'] {
+    color-scheme: light;
+    --superficie: 255 255 255;
+    --superficie-fundo: 255 255 255;
+    --superficie-borda: 210 214 222;
+    --superficie-forte: 150 158 172;
+    --tinta: 17 17 17;
+    --tinta-forte: 0 0 0;
+    --tinta-suave: 68 72 82;
+    --tinta-fraca: 110 116 128;
+    --entrada: 4 90 66;
+    --saida: 150 35 30;
+  }
+
+  /* A tela inteira sai; so a folha fica. */
+  .nao-imprimir {
+    display: none !important;
+  }
+
+  .so-impressao {
+    display: block !important;
+    color: rgb(var(--tinta));
+    font-size: 10.5pt;
+    line-height: 1.45;
+  }
+
+  @page {
+    margin: 16mm 14mm;
+  }
+
+  .impressao-cabecalho {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12mm;
+    border-bottom: 1.5pt solid rgb(var(--tinta));
+    padding-bottom: 3mm;
+  }
+
+  .impressao-marca {
+    font-size: 9pt;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: rgb(var(--tinta-suave));
+  }
+
+  .impressao-titulo {
+    margin-top: 1mm;
+    font-size: 17pt;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .impressao-meta {
+    font-size: 8.5pt;
+    color: rgb(var(--tinta-fraca));
+    white-space: nowrap;
+  }
+
+  .impressao-resumo {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    border-bottom: 0.5pt solid rgb(var(--superficie-borda));
+    margin-bottom: 7mm;
+  }
+
+  .impressao-celula {
+    padding: 4mm 5mm 4mm 0;
+  }
+
+  .impressao-celula + .impressao-celula {
+    border-left: 0.5pt solid rgb(var(--superficie-borda));
+    padding-left: 5mm;
+  }
+
+  .impressao-celula-rotulo {
+    font-size: 8.5pt;
+    color: rgb(var(--tinta-suave));
+  }
+
+  .impressao-celula-valor {
+    margin-top: 1mm;
+    font-size: 12pt;
+    font-weight: 600;
+  }
+
+  .impressao-celula.destaque .impressao-celula-valor {
+    font-size: 14pt;
+  }
+
+  /* Nunca deixar um titulo de secao sozinho no pe da pagina. */
+  .impressao-secao {
+    margin-bottom: 7mm;
+    break-inside: auto;
+  }
+
+  .impressao-secao-titulo {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    border-bottom: 0.5pt solid rgb(var(--tinta));
+    padding-bottom: 1.5mm;
+    margin-bottom: 2mm;
+    font-size: 10.5pt;
+    font-weight: 700;
+    break-after: avoid;
+  }
+
+  .impressao-contagem {
+    font-size: 8.5pt;
+    font-weight: 400;
+    color: rgb(var(--tinta-suave));
+  }
+
+  .impressao-tabela {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  /* Repete o cabecalho da tabela em cada pagina: sem isso, da segunda folha em
+     diante a coluna de numeros perde o nome. */
+  .impressao-tabela thead {
+    display: table-header-group;
+  }
+
+  .impressao-tabela th,
+  .impressao-tabela td {
+    padding: 1.4mm 2mm;
+    text-align: left;
+    vertical-align: baseline;
+  }
+
+  .impressao-tabela thead th {
+    font-size: 8pt;
+    font-weight: 600;
+    color: rgb(var(--tinta-suave));
+    border-bottom: 0.5pt solid rgb(var(--superficie-borda));
+  }
+
+  .impressao-tabela tbody tr {
+    break-inside: avoid;
+    border-bottom: 0.25pt solid rgb(var(--superficie-borda));
+  }
+
+  .impressao-tabela .direita {
+    text-align: right;
+  }
+
+  /* Numero alinhado em coluna so se compara de verdade com largura fixa. */
+  .impressao-tabela .numero,
+  .impressao-celula-valor {
+    font-variant-numeric: tabular-nums slashed-zero;
+  }
+
+  .impressao-dia th {
+    padding-top: 3.5mm;
+    font-size: 9pt;
+    font-weight: 700;
+  }
+
+  .impressao-dia td {
+    padding-top: 3.5mm;
+    font-size: 9pt;
+    color: rgb(var(--tinta-suave));
+  }
+
+  .impressao-dia {
+    break-after: avoid;
+  }
+
+  .impressao-total td {
+    border-top: 0.5pt solid rgb(var(--tinta));
+    font-weight: 700;
+  }
+
+  .impressao-vazio {
+    padding: 6mm 0;
+    color: rgb(var(--tinta-suave));
+  }
+
+  .impressao-rodape {
+    margin-top: 8mm;
+    border-top: 0.5pt solid rgb(var(--superficie-borda));
+    padding-top: 2.5mm;
+    font-size: 8pt;
+    color: rgb(var(--tinta-fraca));
+  }
+}

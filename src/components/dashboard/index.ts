@@ -1,6 +1,9 @@
 export { Dashboard } from './Dashboard';
 export { CabecalhoMes } from './CabecalhoMes';
 export { CalendarioMes } from './CalendarioMes';
-export { CartaoSaldo } from './CartaoSaldo';
+export { FaixaSaldo } from './FaixaSaldo';
+export { CartaoEvolucao } from './CartaoEvolucao';
+export { CartaoFluxo } from './CartaoFluxo';
+export { TrilhaMeses } from './TrilhaMeses';
 export { GraficoCategorias } from './GraficoCategorias';
 export { ListaTransacoes } from './ListaTransacoes';

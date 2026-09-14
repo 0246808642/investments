@@ -6,6 +6,8 @@ interface CategoriaPadrao {
   readonly nome: string;
   readonly tipo: TipoMovimento;
   readonly cor: string;
+  /** Marcadas de fabrica: as que aparecem em quase todo mes de quase todo mundo. */
+  readonly favorita: boolean;
 }
 
 /**
@@ -15,15 +17,15 @@ interface CategoriaPadrao {
  */
 export const CATEGORIAS_PADRAO: readonly CategoriaPadrao[] = [
   // Saidas
-  { id: '00000000-0000-4000-8000-000000000001', nome: 'Mercado', tipo: 'saida', cor: '#ea580c' },
-  { id: '00000000-0000-4000-8000-000000000002', nome: 'Transporte', tipo: 'saida', cor: '#0284c7' },
-  { id: '00000000-0000-4000-8000-000000000003', nome: 'Moradia', tipo: 'saida', cor: '#7c3aed' },
-  { id: '00000000-0000-4000-8000-000000000004', nome: 'Saúde', tipo: 'saida', cor: '#db2777' },
-  { id: '00000000-0000-4000-8000-000000000005', nome: 'Lazer', tipo: 'saida', cor: '#a16207' },
-  { id: '00000000-0000-4000-8000-000000000006', nome: 'Outros', tipo: 'saida', cor: '#64748b' },
+  { id: '00000000-0000-4000-8000-000000000001', nome: 'Mercado', tipo: 'saida', cor: '#ea580c', favorita: true },
+  { id: '00000000-0000-4000-8000-000000000002', nome: 'Transporte', tipo: 'saida', cor: '#0284c7', favorita: true },
+  { id: '00000000-0000-4000-8000-000000000003', nome: 'Moradia', tipo: 'saida', cor: '#7c3aed', favorita: false },
+  { id: '00000000-0000-4000-8000-000000000004', nome: 'Saúde', tipo: 'saida', cor: '#db2777', favorita: false },
+  { id: '00000000-0000-4000-8000-000000000005', nome: 'Lazer', tipo: 'saida', cor: '#a16207', favorita: false },
+  { id: '00000000-0000-4000-8000-000000000006', nome: 'Outros', tipo: 'saida', cor: '#64748b', favorita: false },
   // Entradas
-  { id: '00000000-0000-4000-8000-000000000007', nome: 'Salário', tipo: 'entrada', cor: '#10b981' },
-  { id: '00000000-0000-4000-8000-000000000008', nome: 'Extra', tipo: 'entrada', cor: '#14b8a6' },
+  { id: '00000000-0000-4000-8000-000000000007', nome: 'Salário', tipo: 'entrada', cor: '#10b981', favorita: true },
+  { id: '00000000-0000-4000-8000-000000000008', nome: 'Extra', tipo: 'entrada', cor: '#14b8a6', favorita: false },
 ];
 
 export function construirCategoriasPadrao(): Categoria[] {

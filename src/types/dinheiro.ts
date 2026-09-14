@@ -1,3 +1,6 @@
+import type { Idioma } from '../i18n/idiomas';
+import { idiomaAtual } from '../i18n/idiomas';
+
 /**
  * Dinheiro e SEMPRE inteiro em centavos. O branded type impede que um number
  * qualquer (resultado de parseFloat, de uma divisao, de um input) entre no banco
@@ -34,15 +37,31 @@ export function negar(valor: Centavos): Centavos {
   return centavos(-valor);
 }
 
-/** Insere o ponto de milhar sem converter para float. */
-function agruparMilhares(digitos: string): string {
-  return digitos.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+/**
+ * Separadores por idioma. Portugues e espanhol usam ponto no milhar e virgula no
+ * decimal; ingles faz o contrario.
+ *
+ * A MOEDA nao muda: o dinheiro do usuario continua sendo real, em qualquer
+ * idioma. O que muda e como o numero se escreve — trocar R$ por $ transformaria
+ * a traducao da interface numa conversao de valor que ninguem pediu e que o app
+ * nao tem cotacao para fazer.
+ */
+const SEPARADORES: Record<Idioma, { milhar: string; decimal: string }> = {
+  'pt-BR': { milhar: '.', decimal: ',' },
+  es: { milhar: '.', decimal: ',' },
+  en: { milhar: ',', decimal: '.' },
+};
+
+/** Insere o separador de milhar sem converter para float. */
+function agruparMilhares(digitos: string, milhar: string): string {
+  return digitos.replace(/\B(?=(\d{3})+(?!\d))/g, milhar);
 }
 
 /** Formata o valor absoluto trabalhando so com string: nenhuma divisao, nenhum float. */
 function formatarAbsoluto(absoluto: number): string {
+  const { milhar, decimal } = SEPARADORES[idiomaAtual()];
   const digitos = absoluto.toString().padStart(3, '0');
-  return `${agruparMilhares(digitos.slice(0, -2))},${digitos.slice(-2)}`;
+  return `${agruparMilhares(digitos.slice(0, -2), milhar)}${decimal}${digitos.slice(-2)}`;
 }
 
 /**
@@ -73,10 +92,12 @@ export function formatarCompacto(valor: Centavos): string {
   const sinal = valor < 0 ? MENOS : '+';
   const reais = Math.trunc(Math.abs(valor) / 100);
 
+  const { decimal } = SEPARADORES[idiomaAtual()];
+
   if (reais === 0) {
     // Abaixo de um real, "0" leria como "nao houve movimento". Mostra os centavos.
     const centavosRestantes = (Math.abs(valor) % 100).toString().padStart(2, '0');
-    return `${sinal}0,${centavosRestantes}`;
+    return `${sinal}0${decimal}${centavosRestantes}`;
   }
 
   if (reais < 1000) {
@@ -87,12 +108,16 @@ export function formatarCompacto(valor: Centavos): string {
   const decimos = Math.trunc((reais * 10) / escala.divisor);
   const inteiro = Math.trunc(decimos / 10);
   const decimo = decimos % 10;
-  const fracao = decimo === 0 ? '' : `,${decimo.toString()}`;
+  const fracao = decimo === 0 ? '' : `${decimal}${decimo.toString()}`;
   return `${sinal}${inteiro.toString()}${fracao}${escala.sufixo}`;
 }
 
 /**
  * Le o que o usuario digitou no teclado decimal do celular.
+ *
+ * Vale para os tres idiomas sem ramificar: a regra abaixo decide pelo FORMATO do
+ * que foi digitado, nao pelo idioma da interface — e e isso que faz "1,234.56" e
+ * "1.234,56" chegarem os dois a 123456.
  *
  * Regra: o ultimo separador (, ou .) e decimal quando tem 1 ou 2 digitos depois
  * dele; caso contrario todos os separadores sao de milhar. Isso torna o

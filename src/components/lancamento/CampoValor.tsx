@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { Centavos, TipoMovimento } from '../../types';
+import { useTextos } from '../../i18n';
 import { centavos, formatarMoeda, ZERO } from '../../types';
 
 /** 999.999.999,99 — teto do que cabe com folga em Number.isSafeInteger. */
@@ -20,6 +21,7 @@ export interface CampoValorProps {
  */
 export function CampoValor({ valor, aoMudar, tipo }: CampoValorProps): React.JSX.Element {
   const campo = useRef<HTMLInputElement>(null);
+  const t = useTextos();
 
   // Foco ao abrir a folha: o teclado ja sobe com o cursor no valor.
   useEffect(() => {
@@ -49,18 +51,21 @@ export function CampoValor({ valor, aoMudar, tipo }: CampoValorProps): React.JSX
     }
   }
 
-  const corDoValor = tipo === 'entrada' ? 'text-entrada' : 'text-saida';
+  // Zero e o estado inicial, nao um lancamento de zero reais: pintado de
+  // vermelho ele parecia erro antes de a pessoa ter digitado qualquer coisa.
+  const corDoValor =
+    valor === ZERO ? 'text-tinta-fraca' : tipo === 'entrada' ? 'text-entrada' : 'text-saida';
 
   return (
     <label className="block">
-      <span className="text-rotulo font-medium text-tinta-suave">Valor</span>
+      <span className="text-rotulo font-medium text-tinta-suave">{t.lancamento.quanto}</span>
       <input
         ref={campo}
         type="text"
         inputMode="decimal"
         autoComplete="off"
         enterKeyHint="done"
-        aria-label="Valor do lançamento"
+        aria-label={t.lancamento.valorDoLancamento}
         value={formatarMoeda(valor)}
         onChange={aoDigitar}
         onSelect={manterCursorNoFim}

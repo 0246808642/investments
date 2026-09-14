@@ -4,6 +4,7 @@ import type * as React from 'react';
 import type { GastoPorCategoria } from '../../db/consultas';
 import { gastosPorCategoriaDoMes } from '../../db/consultas';
 import type { Centavos, MesISO } from '../../types';
+import { useTextos } from '../../i18n';
 import { centavos, formatarMoeda } from '../../types';
 
 interface GraficoCategoriasProps {
@@ -31,6 +32,7 @@ export function GraficoCategorias({
   className = '',
 }: GraficoCategoriasProps): React.JSX.Element {
   const gastos = useLiveQuery(() => gastosPorCategoriaDoMes(mes), [mes]);
+  const t = useTextos();
 
   if (gastos === undefined) {
     return (
@@ -46,9 +48,7 @@ export function GraficoCategorias({
   if (itens.length === 0) {
     return (
       <Moldura className={className}>
-        <p className="py-6 text-center text-sm text-tinta-suave">
-          Nenhuma saída neste mês. Quando houver, o dinheiro aparece dividido por categoria aqui.
-        </p>
+        <p className="py-6 text-center text-sm text-tinta-suave">{t.inicio.semSaidas}</p>
       </Moldura>
     );
   }
@@ -56,11 +56,14 @@ export function GraficoCategorias({
   const segmentos = posicionar(itens);
 
   return (
-    <Moldura className={className}>
-      <p className="mb-2 text-sm font-semibold tabular-nums text-tinta md:text-base">
-        {formatarMoeda(total)}
-      </p>
-
+    <Moldura
+      className={className}
+      total={
+        <p className="shrink-0 text-base font-semibold tabular-nums text-tinta md:text-lg">
+          {formatarMoeda(total)}
+        </p>
+      }
+    >
       {/* O arredondamento vem do wrapper: assim a altura da fita pode ser
           responsiva sem que um rx fixo vire lozango na altura menor. */}
       <div className="h-3 overflow-hidden rounded-md md:h-4 lg:h-5">
@@ -68,7 +71,7 @@ export function GraficoCategorias({
           width="100%"
           height="100%"
           role="img"
-          aria-label={`Saídas por categoria, total de ${formatarMoeda(total)}`}
+          aria-label={`${t.inicio.paraOndeFoi}: ${formatarMoeda(total)}`}
           className="block h-full w-full"
         >
           {segmentos.map((segmento) => (
@@ -95,7 +98,7 @@ export function GraficoCategorias({
             />
           ))}
 
-          {/* Em lg sobra largura: o segmento largo passa a carregar o proprio nome. */}
+          {/* Com a fita na largura inteira, o segmento largo carrega o proprio nome. */}
           {segmentos
             .filter((segmento) => segmento.largura >= LARGURA_MINIMA_PARA_ROTULO)
             .map((segmento) => (
@@ -105,7 +108,7 @@ export function GraficoCategorias({
                 y="50%"
                 textAnchor="middle"
                 dominantBaseline="central"
-                className="hidden fill-white text-[11px] font-medium lg:inline"
+                className="hidden fill-white text-[11px] font-medium md:inline"
               >
                 {segmento.nome}
               </text>
@@ -114,12 +117,12 @@ export function GraficoCategorias({
       </div>
 
       {/*
-        Duas colunas so a partir de lg. Em md o card do grafico tem ~350px:
-        com w-24 do valor e w-10 do percentual reservados, o nome (flex-1
-        min-w-0 truncate) era espremido ate zero e a legenda virava bolinha
-        + numero, sem dizer de que categoria.
+        A legenda so divide em colunas quando o nome cabe: com w-24 do valor e
+        w-10 do percentual reservados, abaixo de md o nome (flex-1 min-w-0
+        truncate) seria espremido ate zero e a legenda viraria bolinha + numero,
+        sem dizer de que categoria. Em xl a faixa inteira comporta tres.
       */}
-      <ul className="mt-3 space-y-1.5 lg:grid lg:grid-cols-2 lg:gap-x-8 lg:gap-y-1 lg:space-y-0">
+      <ul className="mt-3 space-y-1.5 md:grid md:grid-cols-2 md:gap-x-8 md:gap-y-1 md:space-y-0 xl:grid-cols-3">
         {itens.map((item) => (
           <li key={item.categoriaId} className="relative flex items-center gap-2.5 py-0.5">
             {/* Em lg a linha ganha barra de fundo proporcional: a largura morta
@@ -155,16 +158,28 @@ export function GraficoCategorias({
 interface MolduraProps {
   children: React.ReactNode;
   className: string;
+  /** Total de saidas, na direita do cabecalho. Ausente enquanto carrega e no vazio. */
+  total?: React.ReactNode;
 }
 
-function Moldura({ children, className }: MolduraProps): React.JSX.Element {
+/**
+ * Titulo e total dividem a MESMA linha. Empilhados, o total virava um segundo
+ * numero grande solto logo abaixo de um rotulo — e a tela ja tem um numero
+ * grande, que e o saldo la em cima.
+ */
+function Moldura({ children, className, total = null }: MolduraProps): React.JSX.Element {
+  const t = useTextos();
+
   return (
     <section
-      aria-label="Saídas por categoria"
+      aria-label={t.inicio.paraOndeFoi}
       className={`rounded-xl border border-superficie-borda bg-superficie p-4 md:p-5 lg:p-6 ${className}`}
     >
-      <h2 className="text-rotulo font-medium text-tinta-suave">Para onde foi o dinheiro</h2>
-      <div className="mt-2">{children}</div>
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="text-rotulo font-medium text-tinta-suave">{t.inicio.paraOndeFoi}</h2>
+        {total}
+      </div>
+      <div className="mt-3">{children}</div>
     </section>
   );
 }

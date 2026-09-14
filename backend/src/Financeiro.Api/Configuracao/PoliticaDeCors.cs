@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 
 namespace Financeiro.Api.Configuracao;
 
@@ -13,7 +13,13 @@ internal static class PoliticaDeCors
 
     // Vite de desenvolvimento. Fica como fallback para que um clone novo do repo
     // suba funcionando; nao e segredo nem endereco de producao.
-    public const string OrigemPadraoDeDesenvolvimento = "http://localhost:5173";
+    //
+    // Sao DUAS portas porque o Vite anda: quando a 5173 ja esta ocupada — outra
+    // instancia, outro projeto — ele sobe na 5174 sem avisar, e o login passa a
+    // falhar com "nao foi possivel falar com o servidor", que e exatamente a
+    // mensagem que NAO aponta para CORS.
+    public static readonly string[] OrigensPadraoDeDesenvolvimento =
+        ["http://localhost:5173", "http://localhost:5174"];
 
     public static string[] LerOrigens(IConfiguration configuracao)
     {
@@ -21,7 +27,7 @@ internal static class PoliticaDeCors
 
         var origens = configuracao.GetSection(Secao).Get<string[]>();
         return origens is null || origens.Length == 0
-            ? [OrigemPadraoDeDesenvolvimento]
+            ? OrigensPadraoDeDesenvolvimento
             : origens;
     }
 }

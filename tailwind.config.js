@@ -1,72 +1,80 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: ['selector', '[data-tema="escuro"]'],
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
+      /*
+       * Nenhum hex aqui: cada token aponta para a variavel CSS declarada em
+       * src/index.css, e e la que o tema claro e o escuro trocam de valor.
+       * A sintaxe `rgb(var(--x) / <alpha-value>)` e o que mantem utilitarios
+       * com opacidade (bg-tinta/40, ring-marca/50) funcionando.
+       */
       colors: {
         // ─── Semantica de dominio. O codigo nunca escreve green-600 direto. ───
 
-        // Receita. Hue mantido: ja esta calibrado e legivel.
         entrada: {
-          DEFAULT: '#047857',
-          forte: '#065f46',
-          suave: '#edf8f3',
-          borda: '#b7e3d0',
+          DEFAULT: 'rgb(var(--entrada) / <alpha-value>)',
+          forte: 'rgb(var(--entrada-forte) / <alpha-value>)',
+          suave: 'rgb(var(--entrada-suave) / <alpha-value>)',
+          borda: 'rgb(var(--entrada-borda) / <alpha-value>)',
         },
 
-        // Despesa. Dessaturado do #b91c1c anterior: vermelho puro e linguagem de
-        // ERRO, e nem toda saida e um alarme. REGRA: na lista, saida usa
-        // text-tinta com prefixo "−". Esta cor so aparece nos chips comparativos,
-        // no saldo negativo e na rampa do calendario.
+        // Despesa. Dessaturado do vermelho puro, que e linguagem de ERRO: nem
+        // toda saida e um alarme. REGRA: na lista, saida usa text-tinta com
+        // prefixo "−". Esta cor so aparece nos chips comparativos, no saldo
+        // negativo, nos avisos de limite e na rampa do calendario.
         saida: {
-          DEFAULT: '#af3029',
-          forte: '#8f241e',
-          suave: '#fbf1f0',
-          borda: '#ebc9c5',
-          // Rampa de calor tokenizada em vez de bg-saida/20. Pre-requisito
-          // barato para o modo escuro depois.
-          calor1: '#fbf1f0',
-          calor2: '#f3d9d6',
-          calor3: '#e3aca6',
-          calor4: '#c9756c',
+          DEFAULT: 'rgb(var(--saida) / <alpha-value>)',
+          forte: 'rgb(var(--saida-forte) / <alpha-value>)',
+          suave: 'rgb(var(--saida-suave) / <alpha-value>)',
+          borda: 'rgb(var(--saida-borda) / <alpha-value>)',
+          // Rampa de calor tokenizada em vez de bg-saida/20: opacidade compoe
+          // com o fundo, e no tema escuro cada degrau e outro.
+          calor1: 'rgb(var(--saida-calor1) / <alpha-value>)',
+          calor2: 'rgb(var(--saida-calor2) / <alpha-value>)',
+          calor3: 'rgb(var(--saida-calor3) / <alpha-value>)',
+          calor4: 'rgb(var(--saida-calor4) / <alpha-value>)',
         },
 
         superficie: {
-          DEFAULT: '#ffffff', // card / folha. Branco puro: e ele que cria o degrau.
-          fundo: '#f7f8fa', // era #f1f5f9 (slate-100): frio, recortava cada card.
-          borda: '#e4e7ec', // fio hairline — SUBSTITUI toda shadow-sm
-          forte: '#d0d5dd', // divisor estrutural, borda de input
+          DEFAULT: 'rgb(var(--superficie) / <alpha-value>)', // card / folha: e ele que cria o degrau
+          fundo: 'rgb(var(--superficie-fundo) / <alpha-value>)', // atras do card
+          borda: 'rgb(var(--superficie-borda) / <alpha-value>)', // fio hairline — SUBSTITUI toda shadow-sm
+          forte: 'rgb(var(--superficie-forte) / <alpha-value>)', // divisor estrutural, borda de input
         },
 
         tinta: {
-          DEFAULT: '#0f172a',
-          suave: '#4e5a6e', // era #64748b (4.76:1), falhava nos rotulos de 11-12px
-          fraca: '#8a94a6', // so meta/timestamp/placeholder. Nunca conteudo.
-          forte: '#1e293b', // hover do botao primario
+          DEFAULT: 'rgb(var(--tinta) / <alpha-value>)',
+          suave: 'rgb(var(--tinta-suave) / <alpha-value>)', // rotulos de 11-12px ainda passam aqui
+          fraca: 'rgb(var(--tinta-fraca) / <alpha-value>)', // so meta/timestamp/placeholder
+          forte: 'rgb(var(--tinta-forte) / <alpha-value>)',
         },
 
-        // Accent de marca. Existe para separar ACAO de ESTADO FINANCEIRO: sem ele
-        // o unico elemento colorido clicavel seria verde ou vermelho.
-        // USO: anel de foco, dia selecionado, mes ativo, link secundario.
-        // NAO USO: botao primario — esse continua bg-tinta (quase-preto).
+        // Accent de marca: foco, selecao, mes ativo E o botao primario. Ele
+        // separa ACAO de ESTADO FINANCEIRO — sem ele o unico elemento colorido
+        // clicavel da tela seria verde ou vermelho.
         marca: {
-          DEFAULT: '#37508f',
-          forte: '#2a3e72',
-          suave: '#eef1fa',
-          borda: '#c7d0ea',
+          DEFAULT: 'rgb(var(--marca) / <alpha-value>)',
+          forte: 'rgb(var(--marca-forte) / <alpha-value>)',
+          suave: 'rgb(var(--marca-suave) / <alpha-value>)',
+          borda: 'rgb(var(--marca-borda) / <alpha-value>)',
+          // Texto POR CIMA de bg-marca. Branco no claro, quase-preto no escuro.
+          contraste: 'rgb(var(--marca-contraste) / <alpha-value>)',
         },
 
         // Paleta categorica do grafico: 6 matizes + neutro, todos na mesma faixa
-        // de luminosidade para lerem como UMA familia, e nenhum a menos de 30 graus
-        // de hue do entrada/saida — senao o usuario le "categoria vermelha = ruim".
+        // de luminosidade para lerem como UMA familia, e nenhum a menos de 30
+        // graus de hue do entrada/saida — senao o usuario le "categoria vermelha
+        // = ruim".
         categoria: {
-          1: '#37508f',
-          2: '#0e7490',
-          3: '#7c3aed',
-          4: '#be185d',
-          5: '#b45309',
-          6: '#57534e',
-          outros: '#94a3b8',
+          1: 'rgb(var(--categoria-1) / <alpha-value>)',
+          2: 'rgb(var(--categoria-2) / <alpha-value>)',
+          3: 'rgb(var(--categoria-3) / <alpha-value>)',
+          4: 'rgb(var(--categoria-4) / <alpha-value>)',
+          5: 'rgb(var(--categoria-5) / <alpha-value>)',
+          6: 'rgb(var(--categoria-6) / <alpha-value>)',
+          outros: 'rgb(var(--categoria-outros) / <alpha-value>)',
         },
       },
 
@@ -84,10 +92,15 @@ export default {
       boxShadow: {
         // Sombra existe APENAS para o que flutua. Card, tabela, grafico e
         // calendario usam border-superficie-borda.
-        flutuante: '0 8px 24px -6px rgba(15, 23, 42, 0.16)',
-        folha: '0 -8px 32px -8px rgba(15, 23, 42, 0.14)',
-        modal: '0 16px 48px -12px rgba(15, 23, 42, 0.18)',
-        menu: '0 6px 20px -6px rgba(15, 23, 42, 0.14)',
+        //
+        // A opacidade e alta de proposito: no tema escuro uma sombra preta sobre
+        // fundo quase preto nao separa nada, e quem faz a folha flutuar passa a
+        // ser o degrau de superficie + a borda. Estes valores dao conta dos dois
+        // casos sem virar mancha no claro.
+        flutuante: '0 8px 24px -6px rgb(0 0 0 / 0.28)',
+        folha: '0 -8px 32px -8px rgb(0 0 0 / 0.26)',
+        modal: '0 16px 48px -12px rgb(0 0 0 / 0.32)',
+        menu: '0 6px 20px -6px rgb(0 0 0 / 0.24)',
       },
 
       fontFamily: {

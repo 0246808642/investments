@@ -1,5 +1,7 @@
 import Dexie, { type Table } from 'dexie';
 import type { Categoria, Conta, Transacao } from '../types';
+import type { ConfiguracaoDeAlertas } from './alertas';
+import type { EstadoSincronizacao, Pendencia, Sessao } from './sincronizacao';
 import { agoraISO } from '../types';
 import { construirCategoriasPadrao, RECOLORACAO_V2 } from './seed';
 
@@ -22,6 +24,12 @@ export class AppDatabase extends Dexie {
   readonly transacoes: Table<Transacao, string>;
   readonly contas: Table<Conta, string>;
   readonly categorias: Table<Categoria, string>;
+  // Tabelas de sincronizacao: locais, nunca enviadas ao servidor.
+  readonly pendencias: Table<Pendencia, string>;
+  readonly estadoSincronizacao: Table<EstadoSincronizacao, string>;
+  readonly sessao: Table<Sessao, string>;
+  /** Registro unico ('alertas'). Local: limite e coisa deste aparelho, nao do servidor. */
+  readonly alertas: Table<ConfiguracaoDeAlertas, string>;
 
   constructor() {
     super('financeiro');
@@ -34,9 +42,36 @@ export class AppDatabase extends Dexie {
 
     // Atribuicao explicita em vez do `this.transacoes!: Table<...>` do README do
     // Dexie — assim nada precisa de `!` para calar o compilador.
+    // v3: fila de envio, cursor do pull e sessao. Schema de dominio inalterado.
+    this.version(3).stores({
+      pendencias: 'id, enfileiradoEm',
+      estadoSincronizacao: 'chave',
+      sessao: 'chave',
+    });
+
+    // v4: limites de alerta. Registro unico, chave fixa.
+    this.version(4).stores({
+      alertas: 'chave',
+    });
+
+    // v5: categoria ganha `favorita`. Nao entra no indice — booleano nao e chave
+    // valida no IndexedDB; a ordenacao acontece em memoria, na consulta.
+    this.version(5).upgrade(async (transacao) => {
+      const tabela = transacao.table<Categoria, string>('categorias');
+      await tabela.toCollection().modify((categoria) => {
+        // Quem ja usava o app nao escolheu favorita nenhuma; comecar todas
+        // desmarcadas mantem a grade exatamente como ela era ontem.
+        categoria.favorita = categoria.favorita ?? false;
+      });
+    });
+
     this.transacoes = this.table('transacoes');
     this.contas = this.table('contas');
     this.categorias = this.table('categorias');
+    this.pendencias = this.table('pendencias');
+    this.estadoSincronizacao = this.table('estadoSincronizacao');
+    this.sessao = this.table('sessao');
+    this.alertas = this.table('alertas');
 
     // Schema identico ao da v1; a v2 existe so para corrigir a paleta ja gravada.
     this.version(2).upgrade(async (transacao) => {

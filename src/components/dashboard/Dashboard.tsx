@@ -3,25 +3,39 @@ import type * as React from 'react';
 
 import type { DataISO, MesISO } from '../../types';
 import { mesAtual } from '../../types';
-import { AppShell } from '../layout';
-import { BotaoNovoLancamento } from '../lancamento';
-import { CabecalhoMes } from './CabecalhoMes';
+import { AvisoDeAlerta } from '../alertas';
 import { CalendarioMes } from './CalendarioMes';
-import { CartaoSaldo } from './CartaoSaldo';
+import { CartaoEvolucao } from './CartaoEvolucao';
+import { CartaoFluxo } from './CartaoFluxo';
+import { FaixaSaldo } from './FaixaSaldo';
 import { GraficoCategorias } from './GraficoCategorias';
 import { ListaTransacoes } from './ListaTransacoes';
 
 /**
  * Tela inicial e ponto de composicao do shell.
  *
- * O seletor de mes precisa aparecer DENTRO do chrome (barra em md, header em lg)
- * enquanto o estado do mes mora aqui — por isso e o Dashboard que monta o
- * AppShell, em vez de subir o estado para o App.
+ * Quatro faixas, de cima para baixo, na ordem das perguntas que o usuario faz:
  *
- * Grid: 1 coluna no celular, 2 no tablet e 12 no desktop. O par que importa e
- * Calendario (5) ao lado de Lista (7): o calendario E o filtro da lista, e
- * empilhado essa relacao de causa fica invisivel. A lista leva 7 e o grafico 5
- * porque a fila de lancamentos e a estrutura primaria; o grafico e resumo.
+ *   1. Onde eu estou           faixa de saldo (largura inteira)
+ *   2. Como cheguei aqui       curva do saldo + entrou/saiu por mes
+ *   3. Quando e no que gastei  calendario + extrato, lado a lado
+ *   4. Para onde foi o mes     grafico de categorias (largura inteira)
+ *
+ * A faixa 2 vem antes do detalhe do mes de proposito: tendencia e o contexto que
+ * decide se o mes corrente e bom ou ruim, e ela chega antes de qualquer numero
+ * do mes justamente para nao ser lida como conclusao.
+ *
+ * Calendario (7) e Lista (5) continuam vizinhos porque o calendario E o filtro
+ * da lista: empilhados, essa relacao de causa fica invisivel. O grafico vai para
+ * baixo e ganha a largura toda — a fita empilhada melhora com largura, enquanto
+ * card estreito com sobra de altura era exatamente o que abria buraco na direita
+ * do layout antigo.
+ *
+ * O seletor de mes nao vive no shell: ele fica dentro da faixa de saldo, junto
+ * da trilha que mostra o efeito de trocar de mes.
+ *
+ * O shell tambem nao e montado aqui — quem monta e o App, que e quem conhece a
+ * rota. Esta tela entrega so o proprio conteudo.
  */
 export function Dashboard(): React.JSX.Element {
   const [mes, setMes] = useState<MesISO>(() => mesAtual());
@@ -34,39 +48,29 @@ export function Dashboard(): React.JSX.Element {
   };
 
   return (
-    <AppShell
-      acaoSidebar={<BotaoNovoLancamento variante="sidebar" />}
-      acaoBarra={<BotaoNovoLancamento variante="barra" />}
-      seletorMes={<CabecalhoMes mes={mes} aoMudarMes={trocarMes} />}
-    >
-      {/* Abaixo de md o shell nao tem chrome: o seletor vive no proprio conteudo. */}
-      <CabecalhoMes mes={mes} aoMudarMes={trocarMes} className="mb-4 md:hidden" />
-
-      {/*
-        items-start impede o cartao de saldo de esticar ate a altura do grafico e
-        abrir um buraco embaixo do numero.
-        O padding inferior existe so enquanto o FAB existe (ele e md:hidden); sem
-        ele o botao cobre a ultima transacao. Os "_" sao obrigatorios: calc() sem
-        espaco em volta do "+" e CSS invalido e o browser descarta a regra inteira.
-      */}
-      <div className="grid grid-cols-1 items-start gap-4 pb-[calc(6rem_+_env(safe-area-inset-bottom))] md:grid-cols-2 md:gap-5 md:pb-2 lg:grid-cols-12 lg:gap-6 xl:gap-8">
-        <CartaoSaldo mes={mes} className="md:col-span-2 lg:col-span-5" />
-        <GraficoCategorias mes={mes} className="md:col-span-1 lg:col-span-7" />
-        <CalendarioMes
-          mes={mes}
-          diaSelecionado={diaSelecionado}
-          aoSelecionarDia={setDiaSelecionado}
-          className="md:col-span-1 lg:col-span-5"
-        />
-        <ListaTransacoes
-          mes={mes}
-          diaSelecionado={diaSelecionado}
-          aoLimparFiltro={() => {
-            setDiaSelecionado(null);
-          }}
-          className="md:col-span-2 lg:col-span-7"
-        />
-      </div>
-    </AppShell>
+    <div className="grid grid-cols-1 items-start gap-4 md:gap-5 lg:grid-cols-12 lg:gap-6 xl:gap-8">
+      {/* Acima do saldo: um limite estourado muda a leitura do numero que vem
+          logo abaixo, entao chega antes dele. Some sozinho quando nao ha nada
+          estourado — nao e um card vazio esperando conteudo. */}
+      <AvisoDeAlerta className="lg:col-span-12" />
+      <FaixaSaldo mes={mes} aoMudarMes={trocarMes} className="lg:col-span-12" />
+      <CartaoEvolucao mes={mes} aoMudarMes={trocarMes} className="lg:col-span-7" />
+      <CartaoFluxo mes={mes} aoMudarMes={trocarMes} className="lg:col-span-5" />
+      <CalendarioMes
+        mes={mes}
+        diaSelecionado={diaSelecionado}
+        aoSelecionarDia={setDiaSelecionado}
+        className="lg:col-span-7"
+      />
+      <ListaTransacoes
+        mes={mes}
+        diaSelecionado={diaSelecionado}
+        aoLimparFiltro={() => {
+          setDiaSelecionado(null);
+        }}
+        className="lg:col-span-5"
+      />
+      <GraficoCategorias mes={mes} className="lg:col-span-12" />
+    </div>
   );
 }

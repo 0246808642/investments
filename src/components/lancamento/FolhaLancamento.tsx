@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { criarTransacao } from '../../db/consultas';
 import type { Categoria, Centavos, DataISO, TipoMovimento, Transacao } from '../../types';
-import { ehDataISO, hoje, ZERO } from '../../types';
+import { ehDataISO, formatarDataComSemana, formatarMoeda, hoje, ontem, ZERO } from '../../types';
 import { useCategorias } from '../../hooks/useCategorias';
+import type { Textos } from '../../i18n';
+import { useTextos } from '../../i18n';
 import { useTravaScroll } from '../../hooks/useTravaScroll';
 import { CampoValor } from './CampoValor';
 
@@ -16,7 +18,10 @@ const ANEL_FOCO =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marca focus-visible:ring-offset-2';
 
 /** Alvo de 44px em <md (dedo) e relaxado em md+ (ha ponteiro). */
-const CAMPO_TEXTO = `min-h-toque mt-1 w-full rounded-lg border border-superficie-borda bg-superficie px-3 text-base text-tinta md:min-h-0 md:py-2 md:text-sm ${ANEL_FOCO}`;
+const CAMPO_TEXTO = `min-h-toque w-full rounded-lg border border-superficie-borda bg-superficie px-3 text-base text-tinta md:min-h-0 md:py-2 md:text-sm ${ANEL_FOCO}`;
+
+/** Pergunta que abre cada bloco. E rotulo de campo, nao enfeite: some se o campo sumir. */
+const PERGUNTA = 'text-rotulo font-medium text-tinta-suave';
 
 export interface FolhaLancamentoProps {
   /** Chamado quando a folha terminou de sair; quem monta deve desmontar aqui. */
@@ -31,8 +36,16 @@ export interface FolhaLancamentoProps {
  * — folha colada embaixo numa tela de 1440px jogaria o formulario para o canto
  * mais distante do olho.
  *
- * A ordem dos campos e a ordem do polegar: valor (ja focado), tipo, categoria,
- * e so depois o que quase sempre fica no default (data e descricao).
+ * A ordem dos campos e a ordem das perguntas que a pessoa responde:
+ *
+ *   1. saida ou entrada   decide TUDO que vem abaixo (cor, categorias, copy)
+ *   2. quanto             ja focado, teclado numerico sobe junto
+ *   3. em que / de onde    grade de categorias do tipo escolhido
+ *   4. quando             "Hoje" ja marcado; o calendario e o caso raro
+ *   5. nota               fechada por padrao: opcional nao ocupa altura
+ *
+ * O tipo subiu para o topo porque ele reescreve o resto do formulario: escolher
+ * o valor antes e escolher quanto de um lancamento que ainda nao existe.
  *
  * Monta so quando aberta — assim o estado nasce limpo e o autofoco acontece
  * dentro do gesto do usuario, que e o que o iOS exige para subir o teclado.
@@ -44,12 +57,17 @@ export function FolhaLancamento({ aoFechar, aoLancar }: FolhaLancamentoProps): R
   const [categoria, setCategoria] = useState<Categoria | null>(null);
   const [data, setData] = useState<DataISO>(hoje);
   const [descricao, setDescricao] = useState('');
+  const [notaAberta, setNotaAberta] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
   const { categorias, carregando } = useCategorias(tipo);
+  const t = useTextos();
   const saindo = useRef<number | null>(null);
   const dialogo = useRef<HTMLFormElement>(null);
+  const campoNota = useRef<HTMLInputElement>(null);
+
+  const ehEntrada = tipo === 'entrada';
 
   useTravaScroll(true);
 
@@ -100,6 +118,12 @@ export function FolhaLancamento({ aoFechar, aoLancar }: FolhaLancamentoProps): R
     }
   }
 
+  function abrirNota(): void {
+    setNotaAberta(true);
+    // Um quadro depois: o campo ainda nao existe no DOM no clique.
+    requestAnimationFrame(() => campoNota.current?.focus());
+  }
+
   const podeSalvar = valor !== ZERO && categoria !== null && !salvando;
 
   async function salvar(): Promise<void> {
@@ -120,7 +144,7 @@ export function FolhaLancamento({ aoFechar, aoLancar }: FolhaLancamentoProps): R
       aoLancar?.(transacao);
       fechar();
     } catch {
-      setErro('Nao foi possivel salvar. Tente de novo.');
+      setErro(t.lancamento.erroAoSalvar);
       setSalvando(false);
     }
   }
@@ -180,18 +204,6 @@ export function FolhaLancamento({ aoFechar, aoLancar }: FolhaLancamentoProps): R
     }
   }
 
-  function classesDoTipo(alvo: TipoMovimento): string {
-    const ativo = tipo === alvo;
-    if (alvo === 'entrada') {
-      return ativo
-        ? 'bg-entrada text-superficie border-entrada'
-        : 'bg-entrada-suave text-entrada border-entrada-borda';
-    }
-    return ativo
-      ? 'bg-saida text-superficie border-saida'
-      : 'bg-saida-suave text-saida border-saida-borda';
-  }
-
   return (
     <div className="fixed inset-0 z-50">
       {/*
@@ -202,7 +214,7 @@ export function FolhaLancamento({ aoFechar, aoLancar }: FolhaLancamentoProps): R
       <button
         type="button"
         tabIndex={-1}
-        aria-label="Fechar"
+        aria-label={t.comum.fechar}
         onClick={fechar}
         className={`absolute inset-0 h-full w-full cursor-default bg-tinta transition-opacity duration-200 ${
           visivel ? 'opacity-40' : 'opacity-0'
@@ -215,7 +227,7 @@ export function FolhaLancamento({ aoFechar, aoLancar }: FolhaLancamentoProps): R
         onKeyDown={aoTeclarNoDialogo}
         role="dialog"
         aria-modal="true"
-        aria-label="Novo lançamento"
+        aria-label={ehEntrada ? t.lancamento.novaEntrada : t.lancamento.novaSaida}
         className={`absolute inset-x-0 bottom-0 max-h-[88vh] overflow-y-auto rounded-t-folha bg-superficie shadow-folha transition duration-200 ease-out md:inset-0 md:m-auto md:h-fit md:max-h-[86vh] md:max-w-lg md:rounded-xl md:shadow-modal ${
           visivel
             ? 'translate-y-0 md:translate-y-0 md:scale-100 md:opacity-100'
@@ -226,11 +238,13 @@ export function FolhaLancamento({ aoFechar, aoLancar }: FolhaLancamentoProps): R
         <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-superficie-borda md:hidden" />
 
         <div className="hidden items-center justify-between px-5 pt-4 md:flex">
-          <h2 className="text-base font-medium text-tinta">Novo lançamento</h2>
+          <h2 className="text-base font-medium text-tinta">
+            {ehEntrada ? t.lancamento.novaEntrada : t.lancamento.novaSaida}
+          </h2>
           <button
             type="button"
             onClick={fechar}
-            aria-label="Fechar"
+            aria-label={t.comum.fechar}
             className={`-mr-1 flex h-8 w-8 items-center justify-center rounded-lg text-tinta-suave transition-colors hover:bg-superficie-fundo hover:text-tinta ${ANEL_FOCO}`}
           >
             <svg
@@ -249,39 +263,24 @@ export function FolhaLancamento({ aoFechar, aoLancar }: FolhaLancamentoProps): R
         </div>
 
         <div className="space-y-5 px-4 pt-4 md:px-5 md:pt-3">
+          <SeletorDeTipo tipo={tipo} aoTrocar={trocarTipo} textos={t} />
+
           <CampoValor valor={valor} aoMudar={setValor} tipo={tipo} />
 
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={() => trocarTipo('saida')}
-              aria-pressed={tipo === 'saida'}
-              className={`min-h-toque flex-1 rounded-lg border text-base font-semibold transition-colors md:min-h-0 md:py-2.5 md:text-sm ${ANEL_FOCO} ${classesDoTipo(
-                'saida',
-              )}`}
-            >
-              Saída
-            </button>
-            <button
-              type="button"
-              onClick={() => trocarTipo('entrada')}
-              aria-pressed={tipo === 'entrada'}
-              className={`min-h-toque flex-1 rounded-lg border text-base font-semibold transition-colors md:min-h-0 md:py-2.5 md:text-sm ${ANEL_FOCO} ${classesDoTipo(
-                'entrada',
-              )}`}
-            >
-              Entrada
-            </button>
-          </div>
-
           <div>
-            <span className="text-rotulo font-medium text-tinta-suave">Categoria</span>
+            <span className={PERGUNTA}>
+              {ehEntrada ? t.lancamento.deOndeVeio : t.lancamento.foiComOQue}
+            </span>
             {carregando ? (
-              <p className="mt-2 text-rotulo text-tinta-suave">Carregando...</p>
+              <p className="mt-2 text-rotulo text-tinta-suave">{t.comum.carregando}</p>
             ) : categorias.length === 0 ? (
-              <p className="mt-2 text-rotulo text-tinta-suave">Nenhuma categoria deste tipo.</p>
+              <p className="mt-2 text-rotulo text-tinta-suave">
+                {t.lancamento.semCategoriaDoTipo(
+                  ehEntrada ? t.comum.entrada : t.comum.saida,
+                )}
+              </p>
             ) : (
-              <div className="mt-2 grid grid-cols-3 gap-2">
+              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {categorias.map((item) => {
                   const selecionada = categoria !== null && categoria.id === item.id;
                   return (
@@ -311,21 +310,39 @@ export function FolhaLancamento({ aoFechar, aoLancar }: FolhaLancamentoProps): R
             )}
           </div>
 
-          <label className="block">
-            <span className="text-rotulo font-medium text-tinta-suave">Data</span>
-            <input type="date" value={data} onChange={trocarData} className={CAMPO_TEXTO} />
-          </label>
+          <SeletorDeData
+            data={data}
+            aoMudarData={setData}
+            aoDigitarData={trocarData}
+            textos={t}
+          />
 
-          <label className="block">
-            <span className="text-rotulo font-medium text-tinta-suave">Descrição (opcional)</span>
-            <input
-              type="text"
-              value={descricao}
-              onChange={(evento) => setDescricao(evento.target.value)}
-              placeholder="Ex.: almoço com o time"
-              className={`${CAMPO_TEXTO} placeholder:text-tinta-fraca`}
-            />
-          </label>
+          {/*
+            Nota fechada por padrao. Quase todo lancamento se resolve com valor,
+            categoria e data; deixar o campo aberto cobrava a altura dele de
+            todo mundo para servir a minoria que escreve alguma coisa.
+          */}
+          {notaAberta ? (
+            <label className="block">
+              <span className={PERGUNTA}>{t.lancamento.nota}</span>
+              <input
+                ref={campoNota}
+                type="text"
+                value={descricao}
+                onChange={(evento) => setDescricao(evento.target.value)}
+                placeholder={t.lancamento.exemploNota}
+                className={`mt-1 ${CAMPO_TEXTO} placeholder:text-tinta-fraca`}
+              />
+            </label>
+          ) : (
+            <button
+              type="button"
+              onClick={abrirNota}
+              className={`-ml-1 flex min-h-toque items-center rounded-lg px-1 text-sm font-medium text-marca md:min-h-0 md:py-1 md:hover:bg-marca-suave ${ANEL_FOCO}`}
+            >
+              {t.lancamento.adicionarNota}
+            </button>
+          )}
 
           {erro !== null ? (
             <p role="alert" className="text-rotulo font-medium text-saida">
@@ -338,12 +355,193 @@ export function FolhaLancamento({ aoFechar, aoLancar }: FolhaLancamentoProps): R
           <button
             type="submit"
             disabled={!podeSalvar}
-            className={`min-h-toque w-full rounded-lg bg-tinta text-base font-semibold text-superficie transition-colors hover:bg-tinta-forte disabled:bg-superficie-borda disabled:text-tinta-suave md:min-h-0 md:py-2.5 md:text-sm ${ANEL_FOCO}`}
+            className={`min-h-toque w-full rounded-lg bg-marca text-base font-semibold text-marca-contraste shadow-sm transition-colors hover:bg-marca-forte disabled:bg-superficie-fundo disabled:text-tinta-suave disabled:shadow-none md:min-h-0 md:py-2.5 md:text-sm ${ANEL_FOCO}`}
           >
-            {salvando ? 'Salvando...' : 'Salvar'}
+            {rotuloDoBotao({ salvando, valor, categoria, ehEntrada, textos: t })}
           </button>
         </div>
       </form>
     </div>
+  );
+}
+
+interface RotuloDoBotaoArgs {
+  salvando: boolean;
+  valor: Centavos;
+  categoria: Categoria | null;
+  ehEntrada: boolean;
+  textos: Textos;
+}
+
+/**
+ * O botao diz o que falta enquanto falta, e o que vai acontecer quando da.
+ * "Salvar" desabilitado e um beco sem saida: a pessoa ve que nao pode e nao
+ * descobre por que.
+ */
+function rotuloDoBotao({
+  salvando,
+  valor,
+  categoria,
+  ehEntrada,
+  textos: t,
+}: RotuloDoBotaoArgs): string {
+  if (salvando) {
+    return t.comum.salvando;
+  }
+  if (valor === ZERO) {
+    return t.lancamento.digiteOValor;
+  }
+  if (categoria === null) {
+    return ehEntrada ? t.lancamento.escolhaOrigem : t.lancamento.escolhaCategoria;
+  }
+  return ehEntrada
+    ? t.lancamento.registrarEntrada(formatarMoeda(valor))
+    : t.lancamento.registrarSaida(formatarMoeda(valor));
+}
+
+interface SeletorDeTipoProps {
+  tipo: TipoMovimento;
+  aoTrocar: (tipo: TipoMovimento) => void;
+  textos: Textos;
+}
+
+/**
+ * Segmentado num trilho unico, e nao dois botoes soltos: com duas pilulas
+ * coloridas lado a lado, "vermelho aceso" e "verde apagado" competiam e nao
+ * havia como saber, de relance, qual estava valendo. Aqui o selecionado e o
+ * unico que levanta do trilho.
+ */
+function SeletorDeTipo({ tipo, aoTrocar, textos: t }: SeletorDeTipoProps): React.JSX.Element {
+  return (
+    <div
+      role="group"
+      aria-label={t.lancamento.tipo}
+      className="grid grid-cols-2 gap-1 rounded-lg bg-superficie-fundo p-1"
+    >
+      <Segmento
+        rotulo={t.lancamento.saiuDinheiro}
+        selecionado={tipo === 'saida'}
+        classeAtiva="text-saida"
+        aoTocar={() => {
+          aoTrocar('saida');
+        }}
+      />
+      <Segmento
+        rotulo={t.lancamento.entrouDinheiro}
+        selecionado={tipo === 'entrada'}
+        classeAtiva="text-entrada"
+        aoTocar={() => {
+          aoTrocar('entrada');
+        }}
+      />
+    </div>
+  );
+}
+
+interface SegmentoProps {
+  rotulo: string;
+  selecionado: boolean;
+  classeAtiva: string;
+  aoTocar: () => void;
+}
+
+function Segmento({ rotulo, selecionado, classeAtiva, aoTocar }: SegmentoProps): React.JSX.Element {
+  return (
+    <button
+      type="button"
+      onClick={aoTocar}
+      aria-pressed={selecionado}
+      className={`min-h-toque rounded-md text-sm font-semibold transition-colors md:min-h-0 md:py-2 ${ANEL_FOCO} ${
+        selecionado
+          ? `bg-superficie shadow-sm ${classeAtiva}`
+          : 'text-tinta-suave md:hover:text-tinta'
+      }`}
+    >
+      {rotulo}
+    </button>
+  );
+}
+
+interface SeletorDeDataProps {
+  data: DataISO;
+  aoMudarData: (data: DataISO) => void;
+  aoDigitarData: (evento: React.ChangeEvent<HTMLInputElement>) => void;
+  textos: Textos;
+}
+
+/**
+ * Quase todo lancamento e de hoje ou de ontem. Dois atalhos resolvem esses dois
+ * casos com um toque; o input de data fica para o resto — e nao para o comeco,
+ * onde ele obrigava a ler "09/14/2026" (o formato vem do locale do navegador,
+ * nao do nosso) so para confirmar que era hoje mesmo.
+ */
+function SeletorDeData({
+  data,
+  aoMudarData,
+  aoDigitarData,
+  textos: t,
+}: SeletorDeDataProps): React.JSX.Element {
+  const dataDeHoje = hoje();
+  const dataDeOntem = ontem();
+  const outroDia = data !== dataDeHoje && data !== dataDeOntem;
+
+  return (
+    <div>
+      <span className={PERGUNTA}>{t.lancamento.quando}</span>
+
+      <div className="mt-2 flex flex-wrap gap-2">
+        <ChipDeData
+          rotulo={t.lancamento.hoje}
+          selecionado={data === dataDeHoje}
+          aoTocar={() => {
+            aoMudarData(dataDeHoje);
+          }}
+        />
+        <ChipDeData
+          rotulo={t.lancamento.ontem}
+          selecionado={data === dataDeOntem}
+          aoTocar={() => {
+            aoMudarData(dataDeOntem);
+          }}
+        />
+
+        <label className="min-w-0 flex-1">
+          <span className="sr-only">{t.lancamento.outroDia}</span>
+          <input
+            type="date"
+            value={data}
+            onChange={aoDigitarData}
+            className={`${CAMPO_TEXTO} ${outroDia ? 'border-marca-borda bg-marca-suave text-marca' : 'text-tinta-suave'}`}
+          />
+        </label>
+      </div>
+
+      {/* Confirmacao por extenso: o input de data mostra o dia no formato do
+          navegador, que pode ser MM/DD. A linha abaixo nao tem essa ambiguidade. */}
+      <p className="mt-1.5 text-xs text-tinta-fraca">{formatarDataComSemana(data)}</p>
+    </div>
+  );
+}
+
+interface ChipDeDataProps {
+  rotulo: string;
+  selecionado: boolean;
+  aoTocar: () => void;
+}
+
+function ChipDeData({ rotulo, selecionado, aoTocar }: ChipDeDataProps): React.JSX.Element {
+  return (
+    <button
+      type="button"
+      onClick={aoTocar}
+      aria-pressed={selecionado}
+      className={`min-h-toque shrink-0 rounded-lg border px-4 text-sm font-medium transition-colors md:min-h-0 md:py-2 ${ANEL_FOCO} ${
+        selecionado
+          ? 'border-marca-borda bg-marca-suave text-marca'
+          : 'border-superficie-borda bg-superficie text-tinta-suave md:hover:border-superficie-forte md:hover:text-tinta'
+      }`}
+    >
+      {rotulo}
+    </button>
   );
 }
