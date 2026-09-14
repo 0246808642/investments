@@ -113,7 +113,13 @@ export function GraficoCategorias({
         </svg>
       </div>
 
-      <ul className="mt-3 space-y-1.5 md:grid md:grid-cols-2 md:gap-x-8 md:gap-y-1 md:space-y-0">
+      {/*
+        Duas colunas so a partir de lg. Em md o card do grafico tem ~350px:
+        com w-24 do valor e w-10 do percentual reservados, o nome (flex-1
+        min-w-0 truncate) era espremido ate zero e a legenda virava bolinha
+        + numero, sem dizer de que categoria.
+      */}
+      <ul className="mt-3 space-y-1.5 lg:grid lg:grid-cols-2 lg:gap-x-8 lg:gap-y-1 lg:space-y-0">
         {itens.map((item) => (
           <li key={item.categoriaId} className="relative flex items-center gap-2.5 py-0.5">
             {/* Em lg a linha ganha barra de fundo proporcional: a largura morta
