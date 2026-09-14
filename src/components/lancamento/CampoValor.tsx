@@ -53,7 +53,7 @@ export function CampoValor({ valor, aoMudar, tipo }: CampoValorProps): React.JSX
 
   return (
     <label className="block">
-      <span className="text-sm font-medium text-tinta-suave">Valor</span>
+      <span className="text-rotulo font-medium text-tinta-suave">Valor</span>
       <input
         ref={campo}
         type="text"
@@ -66,7 +66,7 @@ export function CampoValor({ valor, aoMudar, tipo }: CampoValorProps): React.JSX
         onSelect={manterCursorNoFim}
         onFocus={manterCursorNoFim}
         onClick={manterCursorNoFim}
-        className={`mt-1 w-full bg-transparent text-4xl font-bold tabular-nums tracking-tight outline-none ${corDoValor}`}
+        className={`mt-1 w-full rounded-lg bg-transparent text-4xl font-bold tabular-nums slashed-zero tracking-tight outline-none focus-visible:ring-2 focus-visible:ring-marca focus-visible:ring-offset-2 ${corDoValor}`}
       />
     </label>
   );

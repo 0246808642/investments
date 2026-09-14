@@ -7,6 +7,17 @@
          auto-zoom do iOS ao focar um input e usar fonte >= 16px nele. -->
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#0f172a" />
+    <!-- Inter. display=swap: sem rede na primeira visita o texto sai no stack de
+         sistema (metricas proximas) em vez de ficar invisivel.
+         O tamanho do download e controlado pelo unicode-range de cada @font-face
+         que a folha declara — o browser busca so os arquivos latin e latin-ext
+         que a pagina realmente usa, e ignora cirilico, grego e vietnamita. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <title>Financeiro</title>
   </head>
   <body>

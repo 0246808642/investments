@@ -1,16 +1,17 @@
+import type * as React from 'react';
+
 import { Dashboard } from './components/dashboard';
-import { NovoLancamento } from './components/lancamento';
+import { ProvedorLancamento } from './components/lancamento';
 
 /**
- * Duas superficies apenas: o dashboard ocupa o fluxo e o lancamento e fixed —
- * cada metade gerencia o proprio estado, entao nao ha estado compartilhado aqui.
- * A lista e os graficos reagem via useLiveQuery quando a folha grava.
+ * O provedor precisa ficar acima do Dashboard porque o botao de novo lancamento
+ * vive dentro da sidebar do shell — DOM de outro componente — e abre a mesma
+ * folha que o FAB. Ele ja renderiza o FAB (md:hidden) e a folha/modal.
  */
 export function App(): React.JSX.Element {
   return (
-    <>
+    <ProvedorLancamento>
       <Dashboard />
-      <NovoLancamento />
-    </>
+    </ProvedorLancamento>
   );
 }

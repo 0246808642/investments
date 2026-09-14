@@ -45,14 +45,50 @@ function formatarAbsoluto(absoluto: number): string {
   return `${agruparMilhares(digitos.slice(0, -2))},${digitos.slice(-2)}`;
 }
 
-/** 123456 -> "R$ 1.234,56" ; -500 -> "-R$ 5,00" */
+/**
+ * Sinal de menos tipografico (U+2212), nao hifen. O hifen e mais estreito que os
+ * digitos e serrilha a coluna de valores quando a fonte esta em tabular-nums.
+ */
+export const MENOS = '−';
+
+/** 123456 -> "R$ 1.234,56" ; -500 -> "−R$ 5,00" */
 export function formatarMoeda(valor: Centavos): string {
-  return `${valor < 0 ? '-' : ''}R$ ${formatarAbsoluto(Math.abs(valor))}`;
+  return `${valor < 0 ? MENOS : ''}R$ ${formatarAbsoluto(Math.abs(valor))}`;
 }
 
 /** Mesma coisa sem o simbolo: 123456 -> "1.234,56". Para campos de input. */
 export function formatarMoedaSemSimbolo(valor: Centavos): string {
-  return `${valor < 0 ? '-' : ''}${formatarAbsoluto(Math.abs(valor))}`;
+  return `${valor < 0 ? MENOS : ''}${formatarAbsoluto(Math.abs(valor))}`;
+}
+
+/**
+ * Forma curta para onde nao cabe o valor inteiro — a celula do calendario em
+ * telas grandes. 34000 -> "340" ; -120000 -> "−1,2k" ; 0 -> "".
+ * Arredonda para baixo de proposito: e indicador de magnitude, nao extrato.
+ */
+export function formatarCompacto(valor: Centavos): string {
+  if (valor === 0) {
+    return '';
+  }
+  const sinal = valor < 0 ? MENOS : '+';
+  const reais = Math.trunc(Math.abs(valor) / 100);
+
+  if (reais === 0) {
+    // Abaixo de um real, "0" leria como "nao houve movimento". Mostra os centavos.
+    const centavosRestantes = (Math.abs(valor) % 100).toString().padStart(2, '0');
+    return `${sinal}0,${centavosRestantes}`;
+  }
+
+  if (reais < 1000) {
+    return `${sinal}${reais.toString()}`;
+  }
+
+  const escala = reais < 1000000 ? { divisor: 1000, sufixo: 'k' } : { divisor: 1000000, sufixo: 'M' };
+  const decimos = Math.trunc((reais * 10) / escala.divisor);
+  const inteiro = Math.trunc(decimos / 10);
+  const decimo = decimos % 10;
+  const fracao = decimo === 0 ? '' : `,${decimo.toString()}`;
+  return `${sinal}${inteiro.toString()}${fracao}${escala.sufixo}`;
 }
 
 /**
@@ -68,9 +104,10 @@ export function formatarMoedaSemSimbolo(valor: Centavos): string {
  *   "12,"      -> 1200      ""         -> 0
  */
 export function parseMoeda(texto: string): Centavos {
-  const limpo = texto.replace(/[^\d.,-]/g, '');
-  const negativo = limpo.trimStart().startsWith('-');
-  const corpo = limpo.replace(/-/g, '');
+  // Aceita tanto o hifen digitado quanto o U+2212 que formatarMoeda emite.
+  const limpo = texto.replace(/[^\d.,\-−]/g, '');
+  const negativo = /^[-−]/.test(limpo.trimStart());
+  const corpo = limpo.replace(/[-−]/g, '');
 
   const ultimoSeparador = Math.max(corpo.lastIndexOf(','), corpo.lastIndexOf('.'));
   const casasDepois = ultimoSeparador === -1 ? -1 : corpo.length - ultimoSeparador - 1;
