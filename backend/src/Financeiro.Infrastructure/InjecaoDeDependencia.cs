@@ -32,14 +32,9 @@ public static class InjecaoDeDependencia
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuracao);
 
-        var conexao = configuracao.GetConnectionString(NomeDaConexao);
-        if (string.IsNullOrWhiteSpace(conexao))
-        {
-            throw new InvalidOperationException(
-                "ConnectionStrings:" + NomeDaConexao + " nao configurada. "
-                + "Sem ela nao ha como decidir em qual banco escrever, e um default silencioso "
-                + "apontaria a aplicacao para o banco errado.");
-        }
+        // Aceita as duas procedencias — ConnectionStrings:Financeiro em
+        // desenvolvimento, DATABASE_URL em producao. Ver ConexaoPostgres.
+        var conexao = ConexaoPostgres.Resolver(configuracao);
 
         // Dependencias que o Identity assume existirem. Chamar aqui torna a
         // biblioteca autossuficiente (util nos testes de integracao); em um host
