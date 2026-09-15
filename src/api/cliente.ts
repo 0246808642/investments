@@ -13,17 +13,32 @@ import {
   type RespostaTokenFio,
 } from './contratos';
 
-const BASE_URL_PADRAO = 'http://localhost:5148';
-
 /**
+ * Base das chamadas. Vazia por padrao — ou seja, MESMA ORIGEM do app.
+ *
+ * Havia um fallback para http://localhost:5148 aqui. Ele saiu porque a API deixou
+ * de morar em outro endereco: o frontend e o backend sao dois servicos do mesmo
+ * projeto na Vercel, atras do mesmo dominio, e `/api/...` chega ao container por
+ * rewrite (ver vercel.json). Nao existe URL de API para configurar.
+ *
+ * Isso apaga o CORS do caminho critico: requisicao de mesma origem nao dispara
+ * preflight e nao depende de lista de origens permitidas — a classe de erro que
+ * so aparece em producao, depois do deploy, simplesmente deixa de existir. Em
+ * desenvolvimento o mesmo vale, via proxy do Vite (ver vite.config.ts).
+ *
+ * VITE_API_URL continua sendo lida, como escape: serve para apontar um build
+ * local contra uma API publicada. Vazia, o app fala com a propria origem.
+ *
  * `import.meta.env` e tipado com index signature solta pelo vite/client, entao a
  * leitura passa por `unknown` antes de qualquer uso — e o jeito de nao deixar um
  * `any` entrar pela porta da configuracao.
  */
 function resolverBaseUrl(): string {
   const configurada: unknown = import.meta.env['VITE_API_URL'];
-  const escolhida = typeof configurada === 'string' && configurada.trim() !== '' ? configurada.trim() : BASE_URL_PADRAO;
-  return escolhida.replace(/\/+$/, ''); // sem barra final: os caminhos ja comecam com '/'
+  if (typeof configurada !== 'string' || configurada.trim() === '') {
+    return '';
+  }
+  return configurada.trim().replace(/\/+$/, ''); // sem barra final: os caminhos ja comecam com '/'
 }
 
 export const BASE_URL = resolverBaseUrl();
