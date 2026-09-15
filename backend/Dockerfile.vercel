@@ -16,8 +16,16 @@ COPY src/Financeiro.Api/Financeiro.Api.csproj src/Financeiro.Api/
 RUN dotnet restore src/Financeiro.Api/Financeiro.Api.csproj
 
 COPY src/ src/
+
+# Sem --no-restore de proposito. O restore acima continua valendo como camada de
+# cache (os pacotes ja baixados nao sao rebaixados), mas o publish precisa se
+# bastar: o builder da Vercel e buildah com --layers, e a pasta global do NuGet
+# escrita num RUN nao chegou intacta ao RUN seguinte — o publish falhava com
+# NETSDK1064 depois de um restore que havia reportado sucesso. Assumir que o
+# estado de um passo sobrevive ao proximo e uma aposta no motor de build; fazer o
+# publish resolver as proprias dependencias nao e.
 RUN dotnet publish src/Financeiro.Api/Financeiro.Api.csproj \
-    -c Release -o /app --no-restore
+    -c Release -o /app
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS runtime
 WORKDIR /app
