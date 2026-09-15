@@ -1,0 +1,73 @@
+# Deploy de producao com as migrations como portao.
+#
+# A Vercel nao tem release_command — nao existe gancho para rodar algo entre o
+# build e o trafego. Este workflow recria essa garantia do lado de fora: migra
+# primeiro, e so publica se a migracao passar. Falhando, o job para no passo de
+# migracao e a versao que ja esta no ar continua servindo, intacta.
+#
+# Para a ordem valer, o deploy automatico da integracao Git da Vercel esta
+# desligado no vercel.json. Se alguem religar la, passam a existir dois caminhos
+# de publicacao — e o da Vercel nao espera a migracao.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  # Permite republicar sem commit novo (rollback, deploy que falhou por rede).
+  workflow_dispatch:
+
+concurrency:
+  # Dois deploys simultaneos migrariam o mesmo banco ao mesmo tempo. Nao cancela
+  # o que esta rodando: abortar no meio de uma migracao e pior que esperar.
+  group: deploy-producao
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Aplicar migrations
+        env:
+          # DATABASE_URL e nao ConnectionStrings__Financeiro: o segredo guarda a
+          # URI que o provedor emite (postgresql://...), e o Npgsql nao le esse
+          # formato. Entrando por aqui, a conversao passa por ConexaoPostgres — o
+          # mesmo caminho que a aplicacao usa em producao, e nao um atalho que so
+          # este workflow exercita.
+          DATABASE_URL: ${{ secrets.CONEXAO_PRODUCAO }}
+
+          # Sem isto, `dotnet run` adota o profile de launchSettings.json, que
+          # define ASPNETCORE_ENVIRONMENT=Development e traz junto o
+          # appsettings.Development.json — cuja connection string aponta para um
+          # Postgres em localhost. O runner nao tem banco nenhum, entao o gate
+          # falharia sempre; pior, na maquina de um dev ele migraria o banco local
+          # e reportaria sucesso sem nunca ter tocado em producao.
+          ASPNETCORE_ENVIRONMENT: Production
+          # A API valida a configuracao de JWT no REGISTRO dos servicos
+          # (AddAuthentication roda antes do container de DI existir), entao
+          # `--migrar` nao sobe sem uma chave presente e com tamanho valido —
+          # mesmo sem assinar token nenhum. Esta aqui e descartavel de proposito:
+          # migracao nao emite token, e o segredo real nao tem por que existir
+          # como secret do GitHub.
+          Jwt__Chave: 'chave-descartavel-so-para-a-migracao-nao-assina-nada'
+          Jwt__Emissor: financeiro-api
+          Jwt__Audiencia: financeiro-app
+        run: >
+          dotnet run
+          --project backend/src/Financeiro.Api/Financeiro.Api.csproj
+          -c Release
+          --no-launch-profile
+          -- --migrar
+
+      - name: Publicar na Vercel
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: >
+          npx --yes vercel@latest deploy --prod --yes
+          --token "${{ secrets.VERCEL_TOKEN }}"

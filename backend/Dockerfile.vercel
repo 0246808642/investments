@@ -1,0 +1,44 @@
+# Imagem da API. Multi-estagio: o SDK (~800 MB) fica no estagio de build e nao
+# viaja para producao — a imagem final carrega so o runtime ASP.NET e os
+# binarios publicados.
+
+FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
+WORKDIR /origem
+
+# Os .csproj vem ANTES do codigo de proposito: `restore` so refaz quando uma
+# dependencia muda, e nao a cada alteracao de arquivo .cs. Sem essa separacao,
+# todo build baixaria o NuGet inteiro de novo.
+COPY Directory.Build.props ./
+COPY src/Financeiro.Domain/Financeiro.Domain.csproj src/Financeiro.Domain/
+COPY src/Financeiro.Application/Financeiro.Application.csproj src/Financeiro.Application/
+COPY src/Financeiro.Infrastructure/Financeiro.Infrastructure.csproj src/Financeiro.Infrastructure/
+COPY src/Financeiro.Api/Financeiro.Api.csproj src/Financeiro.Api/
+RUN dotnet restore src/Financeiro.Api/Financeiro.Api.csproj
+
+COPY src/ src/
+RUN dotnet publish src/Financeiro.Api/Financeiro.Api.csproj \
+    -c Release -o /app --no-restore
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS runtime
+WORKDIR /app
+
+# Usuario sem privilegio: um comprometimento do processo nao vira root no
+# container. O runtime nao escreve em disco em nenhum caminho de execucao.
+RUN adduser --disabled-password --uid 1001 financeiro
+COPY --from=build /app .
+USER financeiro
+
+# A Vercel roteia para a porta 80 por padrao, mas usuario nao-root nao pode abrir
+# porta privilegiada — dai PORT=8080, que e o que ela le para saber para onde
+# mandar o trafego. ASPNETCORE_HTTP_PORTS e o lado do Kestrel: os dois precisam
+# concordar, senao o container sobe e a Vercel bate na porta errada.
+ENV PORT=8080
+ENV ASPNETCORE_HTTP_PORTS=8080
+
+# O servidor de diagnostico do .NET abre socket e fica esperando profiler que
+# nunca vem. Em container efemero e so custo de inicializacao.
+ENV DOTNET_EnableDiagnostics=0
+
+EXPOSE 8080
+
+ENTRYPOINT ["dotnet", "Financeiro.Api.dll"]

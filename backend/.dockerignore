@@ -1,0 +1,11 @@
+# Sai tudo que so existe na maquina de desenvolvimento. Alem de encolher o
+# contexto enviado ao daemon, impede que um bin/ compilado no Windows entre na
+# imagem Linux e seja usado no lugar do que o estagio de build produziu.
+**/bin/
+**/obj/
+tests/
+docker-compose.yml
+Dockerfile.vercel
+.dockerignore
+**/appsettings.Development.json
+**/*.user
