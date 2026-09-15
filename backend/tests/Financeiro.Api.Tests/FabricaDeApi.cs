@@ -112,12 +112,15 @@ internal sealed class FabricaDeApi : WebApplicationFactory<Program>
     // Registra a conta pelo endpoint real e devolve um cliente ja com o Bearer.
     // Passar pelo endpoint (e nao assinar um token por fora) prova que o token que
     // a API emite e aceito pela API.
-    public async Task<HttpClient> ClienteAutenticadoAsync(string email, string senha = "senha-forte-123")
+    public async Task<HttpClient> ClienteAutenticadoAsync(
+        string email,
+        string senha = "senha-forte-123",
+        string nome = "Pessoa de Teste")
     {
         var cliente = CreateClient();
         var resposta = await cliente.PostAsync(
             new Uri("/api/autenticacao/registrar", UriKind.Relative),
-            JsonContent.Create(new { email, senha }));
+            JsonContent.Create(new { email, senha, nome }));
 
         resposta.EnsureSuccessStatusCode();
 

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
 using Financeiro.Application.Abstracoes;
 using Financeiro.Domain.Comum;
 using Microsoft.AspNetCore.Identity;
@@ -13,7 +14,7 @@ namespace Financeiro.Infrastructure.Identidade;
 // A API nunca ve UserManager nem IdentityUser: ela pede "registre" ou "autentique"
 // e recebe um ResultadoIdentidade com o token e o UsuarioId. Trocar o provedor de
 // identidade um dia nao encosta em endpoint nenhum.
-public sealed class ServicoDeIdentidade : IServicoDeIdentidade
+public sealed partial class ServicoDeIdentidade : IServicoDeIdentidade
 {
     // Mesma mensagem para e-mail inexistente e para senha errada. Mensagens
     // diferentes transformam a tela de login num verificador de quais e-mails tem
@@ -39,6 +40,7 @@ public sealed class ServicoDeIdentidade : IServicoDeIdentidade
     public async Task<ResultadoIdentidade> RegistrarAsync(
         string email,
         string senha,
+        string nome,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -50,12 +52,31 @@ public sealed class ServicoDeIdentidade : IServicoDeIdentidade
 
         var normalizado = email.Trim();
 
+        // Colapsa espacos repetidos alem de aparar as pontas: "Ana   Maria" e
+        // "Ana Maria" sao o mesmo nome, e guardar os dois faria a mesma pessoa
+        // parecer duas na lista de contas.
+        var nomeNormalizado = EspacosRepetidos().Replace((nome ?? string.Empty).Trim(), " ");
+        if (nomeNormalizado.Length < UsuarioDaAplicacao.TamanhoMinimoDoNome)
+        {
+            return ResultadoIdentidade.Falha("Informe um nome com pelo menos "
+                + UsuarioDaAplicacao.TamanhoMinimoDoNome.ToString(CultureInfo.InvariantCulture)
+                + " caracteres.");
+        }
+
+        if (nomeNormalizado.Length > UsuarioDaAplicacao.TamanhoMaximoDoNome)
+        {
+            return ResultadoIdentidade.Falha("O nome passa de "
+                + UsuarioDaAplicacao.TamanhoMaximoDoNome.ToString(CultureInfo.InvariantCulture)
+                + " caracteres.");
+        }
+
         // UserName = e-mail: o sistema nao tem conceito de apelido, e deixar os dois
         // campos divergirem criaria duas chaves de login para a mesma conta.
         var usuario = new UsuarioDaAplicacao
         {
             UserName = normalizado,
             Email = normalizado,
+            Nome = nomeNormalizado,
         };
 
         var criacao = await _gerenciador.CreateAsync(usuario, senha ?? string.Empty).ConfigureAwait(false);
@@ -97,6 +118,11 @@ public sealed class ServicoDeIdentidade : IServicoDeIdentidade
             ? EmitirToken(usuario)
             : ResultadoIdentidade.Falha(CredenciaisInvalidas);
     }
+
+    // Gerado em tempo de compilacao: a regex e fixa e nao precisa ser interpretada
+    // a cada registro.
+    [GeneratedRegex(@"\s+")]
+    private static partial Regex EspacosRepetidos();
 
     private static string[] DescricoesDe(IdentityResult resultado)
     {
@@ -148,6 +174,10 @@ public sealed class ServicoDeIdentidade : IServicoDeIdentidade
         };
 
         var token = new JsonWebTokenHandler().CreateToken(descritor);
-        return ResultadoIdentidade.Ok(token, expira, usuarioId);
+
+        // O nome viaja na RESPOSTA, nao no token. Token e credencial: vai em todo
+        // cabecalho Authorization, fica em log de proxy e nao se revoga. Nome e
+        // dado de apresentacao, e o cliente so precisa dele uma vez, no login.
+        return ResultadoIdentidade.Ok(token, expira, usuarioId, usuario.Nome);
     }
 }

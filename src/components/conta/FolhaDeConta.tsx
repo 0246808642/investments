@@ -9,6 +9,7 @@ import { NOME_DO_APP } from '../../marca';
 import { FormularioDeConta } from './FormularioDeConta';
 import { MarcaDoApp } from './MarcaDoApp';
 import { ANEL_FOCO, BOTAO_TEXTO } from './estilos';
+import { nomeDeExibicao } from '../../api/sessao';
 
 /** Igual a duration-200 das classes; se mudar uma, mude a outra. */
 const DURACAO_SAIDA = 200;
@@ -192,7 +193,7 @@ export function FolhaDeConta({ aoFechar, motivo = 'menu' }: FolhaDeContaProps): 
                 <h2 className="text-base font-medium text-tinta">{t.conta.suaConta}</h2>
                 <p className="text-rotulo text-tinta-suave">
                   {t.conta.conectadoComo}{' '}
-                  <span className="font-medium text-tinta">{sessao.email}</span>.
+                  <span className="font-medium text-tinta">{nomeDeExibicao(sessao)}</span>.
                 </p>
               </div>
 

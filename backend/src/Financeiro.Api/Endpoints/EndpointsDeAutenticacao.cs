@@ -12,6 +12,9 @@ internal static class EndpointsDeAutenticacao
     public const string MensagemCredenciaisObrigatorias =
         "Informe email e senha.";
 
+    public const string MensagemNomeObrigatorio =
+        "Informe o nome.";
+
     // Mensagem UNICA para "email nao existe" e "senha errada". Diferenciar as duas
     // transforma o login num verificador de cadastro: quem tem a lista de e-mails
     // descobre quais sao clientes sem acertar nenhuma senha.
@@ -39,16 +42,30 @@ internal static class EndpointsDeAutenticacao
     }
 
     private static async Task<IResult> RegistrarAsync(
-        RequisicaoDeCredenciais? requisicao,
+        RequisicaoDeRegistro? requisicao,
         IServicoDeIdentidade identidade,
         CancellationToken cancellationToken)
     {
-        if (!TentarLerCredenciais(requisicao, out var email, out var senha))
+        if (requisicao is null
+            || !TentarLerCredenciais(
+                new RequisicaoDeCredenciais(requisicao.Email, requisicao.Senha),
+                out var email,
+                out var senha))
         {
             return ResultadosDeErro.Invalido(MensagemCredenciaisObrigatorias);
         }
 
-        var resultado = await identidade.RegistrarAsync(email, senha, cancellationToken).ConfigureAwait(false);
+        // Ausencia do campo e erro de formulario e para aqui; o TAMANHO do nome e
+        // regra de identidade e fica no servico, junto das outras. Duplicar a regra
+        // de tamanho aqui criaria dois limites para manter iguais.
+        if (string.IsNullOrWhiteSpace(requisicao.Nome))
+        {
+            return ResultadosDeErro.Invalido(MensagemNomeObrigatorio);
+        }
+
+        var resultado = await identidade
+            .RegistrarAsync(email, senha, requisicao.Nome, cancellationToken)
+            .ConfigureAwait(false);
 
         // Registro que falha e erro do dado enviado (senha fraca, email em uso):
         // 400 com a lista inteira de motivos, para a tela mostrar todos de uma vez
@@ -100,7 +117,7 @@ internal static class EndpointsDeAutenticacao
     // guardaria e usaria em toda chamada seguinte.
     private static IResult Responder(ResultadoIdentidade resultado)
         => resultado is { Token: { } token, ExpiraEm: { } expiraEm }
-            ? Results.Ok(new RespostaDeToken(token, Instante.ParaTexto(expiraEm)))
+            ? Results.Ok(new RespostaDeToken(token, Instante.ParaTexto(expiraEm), resultado.Nome))
             : throw new InvalidOperationException(
                 "IServicoDeIdentidade devolveu sucesso sem token ou sem expiracao.");
 }

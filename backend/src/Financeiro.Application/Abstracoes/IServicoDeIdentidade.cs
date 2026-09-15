@@ -9,10 +9,17 @@ public sealed record ResultadoIdentidade(
     string? Token,
     DateTimeOffset? ExpiraEm,
     UsuarioId? Usuario,
-    IReadOnlyList<string> Erros)
+    IReadOnlyList<string> Erros,
+    /// Nome de exibicao. Nulo nas contas criadas antes da coluna existir — o
+    /// cliente cai para o e-mail nesses casos.
+    string? Nome = null)
 {
-    public static ResultadoIdentidade Ok(string token, DateTimeOffset expiraEm, UsuarioId usuario)
-        => new(true, token, expiraEm, usuario, []);
+    public static ResultadoIdentidade Ok(
+        string token,
+        DateTimeOffset expiraEm,
+        UsuarioId usuario,
+        string? nome = null)
+        => new(true, token, expiraEm, usuario, [], nome);
 
     public static ResultadoIdentidade Falha(params string[] erros)
         => new(false, null, null, null, erros);
@@ -29,7 +36,12 @@ public sealed record ResultadoIdentidade(
 /// saber de quem e o registro, nunca o e-mail ou o hash da senha.
 public interface IServicoDeIdentidade
 {
-    Task<ResultadoIdentidade> RegistrarAsync(string email, string senha, CancellationToken cancellationToken);
+    /// `nome` e o rotulo de exibicao, nao credencial: o login continua por e-mail.
+    Task<ResultadoIdentidade> RegistrarAsync(
+        string email,
+        string senha,
+        string nome,
+        CancellationToken cancellationToken);
 
     Task<ResultadoIdentidade> AutenticarAsync(string email, string senha, CancellationToken cancellationToken);
 }

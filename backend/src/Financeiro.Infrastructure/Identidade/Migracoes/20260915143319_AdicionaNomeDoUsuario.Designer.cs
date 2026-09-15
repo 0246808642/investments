@@ -3,6 +3,7 @@ using System;
 using Financeiro.Infrastructure.Identidade;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Financeiro.Infrastructure.Identidade.Migracoes
 {
     [DbContext(typeof(IdentidadeDbContext))]
-    partial class IdentidadeDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260915143319_AdicionaNomeDoUsuario")]
+    partial class AdicionaNomeDoUsuario
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

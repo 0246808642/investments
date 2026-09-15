@@ -46,6 +46,14 @@ export interface Sessao {
   expiraEm: string;
   email: string;
   /**
+   * Nome de exibicao, para a UI nao mostrar e-mail.
+   *
+   * Opcional E anulavel: ausente nas sessoes gravadas antes deste campo existir,
+   * nulo nas contas criadas antes da coluna existir no servidor. Quem le cai para
+   * o e-mail nos dois casos.
+   */
+  nome?: string | null;
+  /**
    * "Manter conectado". `false` = a sessao vale ate o navegador fechar; ela
    * continua gravada aqui (nao ha onde mais guardar), mas e descartada na
    * proxima abertura. Ausente em registro antigo conta como `true`: quem ja

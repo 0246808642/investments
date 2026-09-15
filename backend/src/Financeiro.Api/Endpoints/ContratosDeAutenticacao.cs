@@ -10,6 +10,14 @@ namespace Financeiro.Api.Endpoints;
 // requisicao sem corpo.
 internal sealed record RequisicaoDeCredenciais(string? Email, string? Senha);
 
+// Registro pede um campo a mais que o login. Contrato proprio em vez de um Nome
+// opcional no de credenciais: assim o login nao aceita calado um campo que ele
+// ignora, e o OpenAPI descreve cada rota pelo que ela realmente le.
+internal sealed record RequisicaoDeRegistro(string? Email, string? Senha, string? Nome);
+
 // ExpiraEm sai como ISO-8601 UTC com 'Z', igual a updatedAt/deletedAt das
 // transacoes — um formato de instante so no contrato inteiro.
-internal sealed record RespostaDeToken(string Token, string ExpiraEm);
+//
+// Nome e anulavel: conta criada antes da coluna existir nao tem nome, e o cliente
+// cai para o e-mail nesse caso.
+internal sealed record RespostaDeToken(string Token, string ExpiraEm, string? Nome);

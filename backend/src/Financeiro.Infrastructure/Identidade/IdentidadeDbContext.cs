@@ -35,5 +35,12 @@ public sealed class IdentidadeDbContext
 
         builder.HasDefaultSchema(Esquema);
         base.OnModelCreating(builder);
+
+        // O teto vive no modelo, e nao so na validacao do endpoint: quem escrever
+        // direto pelo DbContext um dia (uma rotina de importacao, um seed) esbarra
+        // no mesmo limite que a API impoe.
+        builder.Entity<UsuarioDaAplicacao>()
+            .Property(usuario => usuario.Nome)
+            .HasMaxLength(UsuarioDaAplicacao.TamanhoMaximoDoNome);
     }
 }

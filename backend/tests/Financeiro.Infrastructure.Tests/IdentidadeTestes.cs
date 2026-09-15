@@ -16,6 +16,8 @@ public sealed class IdentidadeTestes
 {
     private const string SenhaValida = "Senha#Forte9";
 
+    private const string NomeValido = "Ana Souza";
+
     private readonly BancoDeTestes _banco;
 
     public IdentidadeTestes(BancoDeTestes banco) => _banco = banco;
@@ -26,7 +28,7 @@ public sealed class IdentidadeTestes
         await using var escopo = _banco.CriarEscopo();
         var servico = escopo.ServiceProvider.GetRequiredService<IServicoDeIdentidade>();
 
-        var resultado = await servico.RegistrarAsync(NovoEmail(), SenhaValida, CancellationToken.None);
+        var resultado = await servico.RegistrarAsync(NovoEmail(), SenhaValida, NomeValido, CancellationToken.None);
 
         Assert.True(resultado.Sucesso);
         Assert.Empty(resultado.Erros);
@@ -44,7 +46,7 @@ public sealed class IdentidadeTestes
         await using var escopo = _banco.CriarEscopo();
         var servico = escopo.ServiceProvider.GetRequiredService<IServicoDeIdentidade>();
 
-        var registro = await servico.RegistrarAsync(email, SenhaValida, CancellationToken.None);
+        var registro = await servico.RegistrarAsync(email, SenhaValida, NomeValido, CancellationToken.None);
         var login = await servico.AutenticarAsync(email, SenhaValida, CancellationToken.None);
 
         Assert.True(login.Sucesso);
@@ -62,7 +64,7 @@ public sealed class IdentidadeTestes
         await using var escopo = _banco.CriarEscopo();
         var servico = escopo.ServiceProvider.GetRequiredService<IServicoDeIdentidade>();
 
-        await servico.RegistrarAsync(email, SenhaValida, CancellationToken.None);
+        await servico.RegistrarAsync(email, SenhaValida, NomeValido, CancellationToken.None);
 
         var login = await servico.AutenticarAsync(email, "Senha#Errada9", CancellationToken.None);
 
@@ -84,8 +86,8 @@ public sealed class IdentidadeTestes
         await using var escopo = _banco.CriarEscopo();
         var servico = escopo.ServiceProvider.GetRequiredService<IServicoDeIdentidade>();
 
-        var primeiro = await servico.RegistrarAsync(email, SenhaValida, CancellationToken.None);
-        var segundo = await servico.RegistrarAsync(email, SenhaValida, CancellationToken.None);
+        var primeiro = await servico.RegistrarAsync(email, SenhaValida, NomeValido, CancellationToken.None);
+        var segundo = await servico.RegistrarAsync(email, SenhaValida, NomeValido, CancellationToken.None);
 
         Assert.True(primeiro.Sucesso);
         Assert.False(segundo.Sucesso);
@@ -100,7 +102,7 @@ public sealed class IdentidadeTestes
         await using var escopo = _banco.CriarEscopo();
         var servico = escopo.ServiceProvider.GetRequiredService<IServicoDeIdentidade>();
 
-        var resultado = await servico.RegistrarAsync(NovoEmail(), "abc", CancellationToken.None);
+        var resultado = await servico.RegistrarAsync(NovoEmail(), "abc", NomeValido, CancellationToken.None);
 
         Assert.False(resultado.Sucesso);
         Assert.NotEmpty(resultado.Erros);
@@ -119,7 +121,7 @@ public sealed class IdentidadeTestes
         var servico = escopo.ServiceProvider.GetRequiredService<IServicoDeIdentidade>();
         var gerenciador = escopo.ServiceProvider.GetRequiredService<UserManager<UsuarioDaAplicacao>>();
 
-        var resultado = await servico.RegistrarAsync(email, SenhaValida, CancellationToken.None);
+        var resultado = await servico.RegistrarAsync(email, SenhaValida, NomeValido, CancellationToken.None);
         Assert.True(resultado.Sucesso);
         Assert.NotNull(resultado.Usuario);
         Assert.NotNull(resultado.Token);
@@ -160,7 +162,7 @@ public sealed class IdentidadeTestes
         await using var escopo = _banco.CriarEscopo();
         var servico = escopo.ServiceProvider.GetRequiredService<IServicoDeIdentidade>();
 
-        var resultado = await servico.RegistrarAsync(NovoEmail(), SenhaValida, CancellationToken.None);
+        var resultado = await servico.RegistrarAsync(NovoEmail(), SenhaValida, NomeValido, CancellationToken.None);
         Assert.NotNull(resultado.Token);
 
         var intruso = new OpcoesJwt
@@ -185,7 +187,7 @@ public sealed class IdentidadeTestes
         await using var escopo = _banco.CriarEscopo();
         var servico = escopo.ServiceProvider.GetRequiredService<IServicoDeIdentidade>();
 
-        var resultado = await servico.RegistrarAsync(NovoEmail(), SenhaValida, CancellationToken.None);
+        var resultado = await servico.RegistrarAsync(NovoEmail(), SenhaValida, NomeValido, CancellationToken.None);
         Assert.NotNull(resultado.Token);
 
         var outroEmissor = new OpcoesJwt
@@ -211,7 +213,7 @@ public sealed class IdentidadeTestes
 
         await using var escopo = _banco.CriarEscopo();
         var servico = escopo.ServiceProvider.GetRequiredService<IServicoDeIdentidade>();
-        await servico.RegistrarAsync(email, SenhaValida, CancellationToken.None);
+        await servico.RegistrarAsync(email, SenhaValida, NomeValido, CancellationToken.None);
 
         var contexto = escopo.ServiceProvider.GetRequiredService<IdentidadeDbContext>();
         var tabela = contexto.Model.FindEntityType(typeof(UsuarioDaAplicacao));
@@ -235,4 +237,85 @@ public sealed class IdentidadeTestes
     // e-mail faria um teste derrubar o outro por um motivo que nao e o dele.
     private static string NovoEmail()
         => "teste-" + Guid.NewGuid().ToString("N", CultureInfo.InvariantCulture) + "@exemplo.test";
+
+    [Fact]
+    public async Task RegistrarGuardaONomeEDevolveNoResultado()
+    {
+        await using var escopo = _banco.CriarEscopo();
+        var servico = escopo.ServiceProvider.GetRequiredService<IServicoDeIdentidade>();
+        var email = NovoEmail();
+
+        var resultado = await servico.RegistrarAsync(email, SenhaValida, NomeValido, CancellationToken.None);
+
+        Assert.True(resultado.Sucesso);
+        Assert.Equal(NomeValido, resultado.Nome);
+
+        // E o login seguinte devolve o mesmo nome: quem fecha a janela e volta nao
+        // pode reencontrar o e-mail na tela.
+        var login = await servico.AutenticarAsync(email, SenhaValida, CancellationToken.None);
+        Assert.Equal(NomeValido, login.Nome);
+    }
+
+    [Fact]
+    public async Task NomeColapsaEspacosRepetidos()
+    {
+        await using var escopo = _banco.CriarEscopo();
+        var servico = escopo.ServiceProvider.GetRequiredService<IServicoDeIdentidade>();
+
+        // "Ana   Maria" e "Ana Maria" sao a mesma pessoa; guardar os dois faria ela
+        // parecer duas contas diferentes em qualquer listagem.
+        var resultado = await servico.RegistrarAsync(
+            NovoEmail(),
+            SenhaValida,
+            "  Ana   Maria  ",
+            CancellationToken.None);
+
+        Assert.Equal("Ana Maria", resultado.Nome);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("A")]
+    public async Task RecusaNomeCurtoDemais(string nome)
+    {
+        await using var escopo = _banco.CriarEscopo();
+        var servico = escopo.ServiceProvider.GetRequiredService<IServicoDeIdentidade>();
+
+        var resultado = await servico.RegistrarAsync(NovoEmail(), SenhaValida, nome, CancellationToken.None);
+
+        Assert.False(resultado.Sucesso);
+        Assert.NotEmpty(resultado.Erros);
+    }
+
+    [Fact]
+    public async Task RecusaNomeAcimaDoTeto()
+    {
+        await using var escopo = _banco.CriarEscopo();
+        var servico = escopo.ServiceProvider.GetRequiredService<IServicoDeIdentidade>();
+
+        // Um caractere alem do limite. Sem esta recusa a gravacao estouraria no
+        // varchar(80) da coluna, e o erro sairia como falha de banco em vez de
+        // mensagem de formulario.
+        var longo = new string('a', UsuarioDaAplicacao.TamanhoMaximoDoNome + 1);
+
+        var resultado = await servico.RegistrarAsync(NovoEmail(), SenhaValida, longo, CancellationToken.None);
+
+        Assert.False(resultado.Sucesso);
+    }
+
+    [Fact]
+    public async Task DoisUsuariosPodemTerOMesmoNome()
+    {
+        await using var escopo = _banco.CriarEscopo();
+        var servico = escopo.ServiceProvider.GetRequiredService<IServicoDeIdentidade>();
+
+        // Nome e rotulo de exibicao, nao credencial. Exigir unicidade impediria o
+        // segundo "Joao Silva" do mundo de criar conta.
+        var primeiro = await servico.RegistrarAsync(NovoEmail(), SenhaValida, "Joao Silva", CancellationToken.None);
+        var segundo = await servico.RegistrarAsync(NovoEmail(), SenhaValida, "Joao Silva", CancellationToken.None);
+
+        Assert.True(primeiro.Sucesso);
+        Assert.True(segundo.Sucesso);
+    }
 }

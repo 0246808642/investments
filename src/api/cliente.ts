@@ -127,10 +127,14 @@ async function postar<T>(chamada: Chamada<T>): Promise<T> {
   return lido;
 }
 
-export async function registrarNoServidor(email: string, senha: string): Promise<RespostaTokenFio> {
+export async function registrarNoServidor(
+  email: string,
+  senha: string,
+  nome: string,
+): Promise<RespostaTokenFio> {
   return postar({
     caminho: '/api/autenticacao/registrar',
-    corpo: { email, senha },
+    corpo: { email, senha, nome },
     autenticada: false,
     ler: lerRespostaToken,
   });

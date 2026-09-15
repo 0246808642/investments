@@ -27,7 +27,12 @@ export interface EstadoDaSessao {
   carregando: boolean;
   autenticado: boolean;
   entrar: (email: string, senha: string, manterConectado: boolean) => Promise<ResultadoDeConta>;
-  registrar: (email: string, senha: string, manterConectado: boolean) => Promise<ResultadoDeConta>;
+  registrar: (
+    email: string,
+    senha: string,
+    nome: string,
+    manterConectado: boolean,
+  ) => Promise<ResultadoDeConta>;
   sair: () => Promise<void>;
 }
 
@@ -58,17 +63,20 @@ export function useSessao(): EstadoDaSessao {
 
   const autenticar = useCallback(
     async (
-      chamar: (email: string, senha: string) => Promise<{ token: string; expiraEm: string }>,
+      // Thunk em vez de (email, senha): registro manda um campo a mais, e alargar
+      // a assinatura para caber os dois deixaria o login com um parametro que ele
+      // ignora. Quem chama ja fecha sobre o que precisa enviar.
+      chamar: () => Promise<{ token: string; expiraEm: string; nome: string | null }>,
       email: string,
-      senha: string,
       manterConectado: boolean,
     ): Promise<ResultadoDeConta> => {
       try {
-        const resposta = await chamar(email, senha);
+        const resposta = await chamar();
         await salvarSessaoDeLogin({
           token: resposta.token,
           expiraEm: resposta.expiraEm,
           email,
+          nome: resposta.nome,
           persistente: manterConectado,
         });
         // Entrou: o "usar sem conta" deixa de fazer sentido e sai do caminho.
@@ -88,13 +96,13 @@ export function useSessao(): EstadoDaSessao {
 
   const entrar = useCallback(
     (email: string, senha: string, manterConectado: boolean) =>
-      autenticar(entrarNoServidor, email, senha, manterConectado),
+      autenticar(() => entrarNoServidor(email, senha), email, manterConectado),
     [autenticar],
   );
 
   const registrar = useCallback(
-    (email: string, senha: string, manterConectado: boolean) =>
-      autenticar(registrarNoServidor, email, senha, manterConectado),
+    (email: string, senha: string, nome: string, manterConectado: boolean) =>
+      autenticar(() => registrarNoServidor(email, senha, nome), email, manterConectado),
     [autenticar],
   );
 

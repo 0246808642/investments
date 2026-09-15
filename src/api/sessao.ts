@@ -24,6 +24,18 @@ export async function salvarSessao(dados: Omit<Sessao, 'chave'>): Promise<void> 
   await db.sessao.put({ ...dados, chave: CHAVE_SESSAO });
 }
 
+/**
+ * O que a interface mostra para identificar a conta.
+ *
+ * Cai para o e-mail quando nao ha nome — conta criada antes da coluna existir, ou
+ * sessao gravada antes deste campo. Fica aqui, e nao em cada componente, para que
+ * o botao da barra e a folha de conta nunca discordem sobre o que exibir.
+ */
+export function nomeDeExibicao(sessao: Sessao): string {
+  const nome = sessao.nome?.trim();
+  return nome !== undefined && nome.length > 0 ? nome : sessao.email;
+}
+
 export async function limparSessao(): Promise<void> {
   await db.sessao.delete(CHAVE_SESSAO);
 }

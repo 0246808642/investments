@@ -26,7 +26,7 @@ public class AutenticacaoTestes
 
         using var resposta = await cliente.PostAsync(
             Cenario.Rota("/api/autenticacao/registrar"),
-            FabricaDeApi.Json("{\"email\":\"" + Cenario.EmailDeAna + "\",\"senha\":\"" + Cenario.Senha + "\"}"));
+            FabricaDeApi.Json("{\"email\":\"" + Cenario.EmailDeAna + "\",\"senha\":\"" + Cenario.Senha + "\",\"nome\":\"Ana Souza\"}"));
 
         Assert.Equal(HttpStatusCode.OK, resposta.StatusCode);
 
@@ -45,7 +45,7 @@ public class AutenticacaoTestes
 
         using var resposta = await cliente.PostAsync(
             Cenario.Rota("/api/autenticacao/registrar"),
-            FabricaDeApi.Json("{\"email\":\"" + Cenario.EmailDeAna + "\",\"senha\":\"123\"}"));
+            FabricaDeApi.Json("{\"email\":\"" + Cenario.EmailDeAna + "\",\"senha\":\"123\",\"nome\":\"Ana Souza\"}"));
 
         Assert.Equal(HttpStatusCode.BadRequest, resposta.StatusCode);
 
@@ -65,7 +65,7 @@ public class AutenticacaoTestes
         using var cliente = fabrica.CreateClient();
         using var login = await cliente.PostAsync(
             Cenario.Rota("/api/autenticacao/login"),
-            FabricaDeApi.Json("{\"email\":\"" + Cenario.EmailDeAna + "\",\"senha\":\"" + Cenario.Senha + "\"}"));
+            FabricaDeApi.Json("{\"email\":\"" + Cenario.EmailDeAna + "\",\"senha\":\"" + Cenario.Senha + "\",\"nome\":\"Ana Souza\"}"));
 
         Assert.Equal(HttpStatusCode.OK, login.StatusCode);
 
@@ -128,8 +128,60 @@ public class AutenticacaoTestes
         using var cliente = fabrica.CreateClient();
         using var resposta = await cliente.PostAsync(
             Cenario.Rota("/api/autenticacao/registrar"),
+            FabricaDeApi.Json("{\"email\":\"" + Cenario.EmailDeAna + "\",\"senha\":\"" + Cenario.Senha + "\",\"nome\":\"Ana Souza\"}"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, resposta.StatusCode);
+    }
+
+    [Fact]
+    public async Task RegistrarDevolveONomeParaAUiExibir()
+    {
+        using var fabrica = new FabricaDeApi();
+        using var cliente = fabrica.CreateClient();
+
+        using var resposta = await cliente.PostAsync(
+            Cenario.Rota("/api/autenticacao/registrar"),
+            FabricaDeApi.Json(
+                "{\"email\":\"" + Cenario.EmailDeAna + "\",\"senha\":\"" + Cenario.Senha + "\",\"nome\":\"Ana Souza\"}"));
+
+        Assert.Equal(HttpStatusCode.OK, resposta.StatusCode);
+
+        var corpo = await FabricaDeApi.LerAsync(resposta);
+        Assert.Equal("Ana Souza", corpo.GetProperty("nome").GetString());
+    }
+
+    [Fact]
+    public async Task RegistrarSemNomeResponde400()
+    {
+        using var fabrica = new FabricaDeApi();
+        using var cliente = fabrica.CreateClient();
+
+        using var resposta = await cliente.PostAsync(
+            Cenario.Rota("/api/autenticacao/registrar"),
             FabricaDeApi.Json("{\"email\":\"" + Cenario.EmailDeAna + "\",\"senha\":\"" + Cenario.Senha + "\"}"));
 
         Assert.Equal(HttpStatusCode.BadRequest, resposta.StatusCode);
+    }
+
+    [Fact]
+    public async Task LoginDevolveONomeDaContaJaCriada()
+    {
+        // O nome nao viaja no token: ele e dado de apresentacao, e o token e
+        // credencial que vai em todo cabecalho Authorization. Entao o login precisa
+        // devolve-lo no corpo, senao quem volta ao app depois de fechar a janela
+        // veria o e-mail de novo.
+        using var fabrica = new FabricaDeApi();
+        fabrica.Identidade.Cadastrar(Cenario.EmailDeAna, Cenario.Senha, "Ana Souza");
+
+        using var cliente = fabrica.CreateClient();
+        using var resposta = await cliente.PostAsync(
+            Cenario.Rota("/api/autenticacao/login"),
+            FabricaDeApi.Json(
+                "{\"email\":\"" + Cenario.EmailDeAna + "\",\"senha\":\"" + Cenario.Senha + "\"}"));
+
+        Assert.Equal(HttpStatusCode.OK, resposta.StatusCode);
+
+        var corpo = await FabricaDeApi.LerAsync(resposta);
+        Assert.Equal("Ana Souza", corpo.GetProperty("nome").GetString());
     }
 }

@@ -3,6 +3,7 @@ import type * as React from 'react';
 import { useSessao } from '../../hooks/useSessao';
 import { useTextos } from '../../i18n';
 import { useAbrirConta } from './useAbrirConta';
+import { nomeDeExibicao } from '../../api/sessao';
 
 interface BotaoDeContaProps {
   /** 'largo' = linha inteira com e-mail (sidebar); 'compacto' = so o rotulo (barra). */
@@ -60,14 +61,14 @@ export function BotaoDeConta({ variante, className = '' }: BotaoDeContaProps): R
       onClick={() => {
         abrir('menu');
       }}
-      title={sessao.email}
-      aria-label={t.conta.contaDe(sessao.email)}
+      title={nomeDeExibicao(sessao)}
+      aria-label={t.conta.contaDe(nomeDeExibicao(sessao))}
       className={`flex min-w-0 items-center gap-2.5 rounded-lg text-sm text-tinta-suave transition-colors hover:bg-superficie hover:text-tinta ${FOCO} ${
         largo ? 'w-full px-3 py-2' : 'px-2.5 py-1.5'
       } ${className}`}
     >
       <Icone />
-      <span className="min-w-0 flex-1 truncate text-left">{sessao.email}</span>
+      <span className="min-w-0 flex-1 truncate text-left">{nomeDeExibicao(sessao)}</span>
     </button>
   );
 }

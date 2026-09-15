@@ -33,6 +33,12 @@ export const REQUISITOS_DE_SENHA: readonly RequisitoDeSenha[] = [
   { chave: 'numero', atende: (s) => /\d/.test(s) },
 ];
 
+/**
+ * Espelha UsuarioDaAplicacao.TamanhoMinimoDoNome no backend. A validacao local
+ * adianta o obvio; a do servidor continua sendo a que vale.
+ */
+const TAMANHO_MINIMO_DO_NOME = 2;
+
 export type ModoDeConta = 'entrar' | 'registrar';
 
 export interface FormularioDeContaProps {
@@ -53,9 +59,20 @@ function validar(
   email: string,
   senha: string,
   confirmacao: string,
+  nome: string,
   t: Textos,
 ): string[] {
   const erros: string[] = [];
+
+  // So no cadastro: quem entra ja tem nome guardado, e pedir de novo seria um
+  // campo a mais para digitar sem nada em troca.
+  if (modo === 'registrar') {
+    if (nome.length === 0) {
+      erros.push(t.conta.informeNome);
+    } else if (nome.length < TAMANHO_MINIMO_DO_NOME) {
+      erros.push(t.conta.nomeCurto);
+    }
+  }
 
   if (email.length === 0) {
     erros.push(t.conta.informeEmail);
@@ -105,6 +122,7 @@ export function FormularioDeConta({
   const t = useTextos();
 
   const [modo, setModo] = useState<ModoDeConta>(modoInicial);
+  const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [confirmacao, setConfirmacao] = useState('');
@@ -152,7 +170,10 @@ export function FormularioDeConta({
     }
 
     const emailLimpo = email.trim();
-    const locais = validar(modo, emailLimpo, senha, confirmacao, t);
+    // Mesma normalizacao do servidor: apara as pontas e colapsa espacos repetidos,
+    // para "Ana   Maria" nao virar um nome diferente de "Ana Maria".
+    const nomeLimpo = nome.trim().replace(/\s+/g, ' ');
+    const locais = validar(modo, emailLimpo, senha, confirmacao, nomeLimpo, t);
     if (locais.length > 0) {
       setErros(locais);
       return;
@@ -162,7 +183,7 @@ export function FormularioDeConta({
     setErros([]);
     try {
       const resultado = criando
-        ? await registrar(emailLimpo, senha, manterConectado)
+        ? await registrar(emailLimpo, senha, nomeLimpo, manterConectado)
         : await entrar(emailLimpo, senha, manterConectado);
 
       if (resultado.ok) {
@@ -239,6 +260,26 @@ export function FormularioDeConta({
       </div>
 
       <div className="space-y-4">
+        {criando ? (
+          <label className="block">
+            <span className="text-rotulo font-medium text-tinta-suave">{t.conta.nome}</span>
+            <input
+              type="text"
+              name="nome"
+              value={nome}
+              onChange={(evento) => setNome(evento.target.value)}
+              autoComplete="name"
+              autoCapitalize="words"
+              enterKeyHint="next"
+              maxLength={80}
+              placeholder={t.conta.exemploNome}
+              aria-invalid={temErro}
+              {...(temErro ? { 'aria-describedby': idErros } : {})}
+              className={CAMPO_TEXTO}
+            />
+          </label>
+        ) : null}
+
         <label className="block">
           <span className="text-rotulo font-medium text-tinta-suave">{t.conta.email}</span>
           <input

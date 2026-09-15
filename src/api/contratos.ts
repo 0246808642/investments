@@ -50,6 +50,8 @@ export interface RespostaSincronizacaoFio {
 export interface RespostaTokenFio {
   readonly token: string;
   readonly expiraEm: string;
+  /** Nome de exibicao. Nulo em conta criada antes do campo existir. */
+  readonly nome: string | null;
 }
 
 export interface RespostaErroFio {
@@ -198,7 +200,13 @@ export function lerRespostaToken(bruto: unknown): RespostaTokenFio | null {
   }
   const token = texto(bruto, 'token');
   const expiraEm = texto(bruto, 'expiraEm');
-  return token === null || expiraEm === null ? null : { token, expiraEm };
+  // Anulavel, nao opcional: ausencia de nome e um estado previsto (conta antiga),
+  // enquanto um nome que venha como numero e resposta fora do contrato.
+  const nome = textoAnulavel(bruto, 'nome');
+  if (token === null || expiraEm === null || !nome.ok) {
+    return null;
+  }
+  return { token, expiraEm, nome: nome.valor };
 }
 
 /** Corpo de erro do backend. Tolerante: um 500 do pipeline pode nao ter esse formato. */

@@ -175,7 +175,7 @@ internal sealed class ServicoDeIdentidadeFake : IServicoDeIdentidade
 {
     public const int TamanhoMinimoDaSenha = 8;
 
-    private readonly Dictionary<string, (UsuarioId Usuario, string Senha)> _contas =
+    private readonly Dictionary<string, (UsuarioId Usuario, string Senha, string? Nome)> _contas =
         new(StringComparer.OrdinalIgnoreCase);
 
     private readonly OpcoesJwt _opcoes;
@@ -192,17 +192,22 @@ internal sealed class ServicoDeIdentidadeFake : IServicoDeIdentidade
 
     // Cadastro direto, sem passar pelo endpoint: usado para semear o usuario B e
     // saber o UsuarioId dele antes de qualquer requisicao.
-    public UsuarioId Cadastrar(string email, string senha)
+    public UsuarioId Cadastrar(string email, string senha, string? nome = null)
     {
         var usuario = UsuarioId.Novo();
-        _contas[email] = (usuario, senha);
+        _contas[email] = (usuario, senha, nome);
         return usuario;
     }
 
-    public Task<ResultadoIdentidade> RegistrarAsync(string email, string senha, CancellationToken cancellationToken)
+    public Task<ResultadoIdentidade> RegistrarAsync(
+        string email,
+        string senha,
+        string nome,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(email);
         ArgumentNullException.ThrowIfNull(senha);
+        ArgumentNullException.ThrowIfNull(nome);
 
         if (_contas.ContainsKey(email))
         {
@@ -218,8 +223,8 @@ internal sealed class ServicoDeIdentidadeFake : IServicoDeIdentidade
                 "Senha precisa de pelo menos um digito."));
         }
 
-        var usuario = Cadastrar(email, senha);
-        return Task.FromResult(Emitir(usuario));
+        var usuario = Cadastrar(email, senha, nome);
+        return Task.FromResult(Emitir(usuario, nome));
     }
 
     public Task<ResultadoIdentidade> AutenticarAsync(string email, string senha, CancellationToken cancellationToken)
@@ -228,7 +233,7 @@ internal sealed class ServicoDeIdentidadeFake : IServicoDeIdentidade
 
         return Task.FromResult(
             _contas.TryGetValue(email, out var conta) && string.Equals(conta.Senha, senha, StringComparison.Ordinal)
-                ? Emitir(conta.Usuario)
+                ? Emitir(conta.Usuario, conta.Nome)
                 : ResultadoIdentidade.Falha("Credenciais invalidas."));
     }
 
@@ -239,7 +244,7 @@ internal sealed class ServicoDeIdentidadeFake : IServicoDeIdentidade
         ["email"] = "fantasma@exemplo.com",
     });
 
-    private ResultadoIdentidade Emitir(UsuarioId usuario)
+    private ResultadoIdentidade Emitir(UsuarioId usuario, string? nome = null)
     {
         var expiraEm = _relogio.Agora.AddMinutes(_opcoes.MinutosDeValidade);
         var token = Assinar(new Dictionary<string, object>(StringComparer.Ordinal)
@@ -248,7 +253,7 @@ internal sealed class ServicoDeIdentidadeFake : IServicoDeIdentidade
             [JwtRegisteredClaimNames.Sub] = usuario.ToString(),
         });
 
-        return ResultadoIdentidade.Ok(token, expiraEm, usuario);
+        return ResultadoIdentidade.Ok(token, expiraEm, usuario, nome);
     }
 
     private string Assinar(Dictionary<string, object> claims)
