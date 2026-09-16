@@ -3,6 +3,8 @@ import { useModoLocal } from '../../api/modoLocal';
 import { useSessao } from '../../hooks/useSessao';
 import { useAbrirConta } from '../conta';
 import { ContextoLancamento } from './contextoLancamento';
+import type { ControleDeLancamento } from './contextoLancamento';
+import type { DataISO } from '../../types';
 import { BotaoFlutuante } from './BotaoFlutuante';
 import { FolhaLancamento } from './FolhaLancamento';
 
@@ -55,6 +57,20 @@ export function ProvedorLancamento({ children }: ProvedorLancamentoProps): React
   // Quem abriu. No desktop o foco tem que voltar para la ao fechar, senao ele
   // cai no <body> e o proximo Tab recomeca do topo da pagina.
   const gatilho = useRef<HTMLElement | null>(null);
+  /*
+   * Dia que a tela da frente sugere (o calendario, com um dia selecionado).
+   *
+   * Em ref e nao em estado: quem escreve e o dashboard a cada troca de dia, e
+   * quem le e o `abrir`, no clique. Guardar em estado re-renderizaria o app
+   * inteiro a cada clique no calendario — e nada na tela depende deste valor
+   * enquanto a folha nao abre.
+   */
+  const dataSugerida = useRef<DataISO | null>(null);
+  const [dataDaFolha, setDataDaFolha] = useState<DataISO | null>(null);
+
+  const definirDataSugerida = useCallback((data: DataISO | null): void => {
+    dataSugerida.current = data;
+  }, []);
 
   const abrir = useCallback((): void => {
     const ativo = document.activeElement;
@@ -64,6 +80,10 @@ export function ProvedorLancamento({ children }: ProvedorLancamentoProps): React
       abrirConta('lancamento');
       return;
     }
+    // A data e congelada NA ABERTURA: se a pessoa trocar o dia do calendario
+    // com a folha aberta, o formulario que ela esta preenchendo nao muda de data
+    // por baixo dela.
+    setDataDaFolha(dataSugerida.current);
     setAbertura((n) => n + 1);
     setAberta(true);
   }, [autenticado, carregando, semConta, abrirConta]);
@@ -77,15 +97,24 @@ export function ProvedorLancamento({ children }: ProvedorLancamentoProps): React
     }
   }, []);
 
-  // O contexto carrega so `abrir`, e `abrir` e estavel: o valor nunca muda,
-  // entao abrir/fechar a folha nao re-renderiza a arvore inteira do app.
-  const valor = useMemo(() => abrir, [abrir]);
+  // As duas funcoes sao estaveis, entao o valor do contexto nunca muda: abrir e
+  // fechar a folha nao re-renderiza a arvore inteira do app.
+  const valor = useMemo<ControleDeLancamento>(
+    () => ({ abrir, definirDataSugerida }),
+    [abrir, definirDataSugerida],
+  );
 
   return (
     <ContextoLancamento.Provider value={valor}>
       {children}
       <BotaoFlutuante aoTocar={abrir} />
-      {aberta ? <FolhaLancamento key={abertura} aoFechar={fechar} /> : null}
+      {aberta ? (
+        <FolhaLancamento
+          key={abertura}
+          aoFechar={fechar}
+          {...(dataDaFolha === null ? {} : { dataInicial: dataDaFolha })}
+        />
+      ) : null}
     </ContextoLancamento.Provider>
   );
 }

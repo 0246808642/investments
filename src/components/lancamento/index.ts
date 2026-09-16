@@ -1,6 +1,7 @@
 export { ProvedorLancamento } from './ProvedorLancamento';
 export type { ProvedorLancamentoProps } from './ProvedorLancamento';
-export { useAbrirLancamento } from './useAbrirLancamento';
+export { useAbrirLancamento, useDataSugerida } from './useAbrirLancamento';
+export type { ControleDeLancamento } from './contextoLancamento';
 export { BotaoNovoLancamento } from './BotaoNovoLancamento';
 export type { BotaoNovoLancamentoProps } from './BotaoNovoLancamento';
 export { BotaoFlutuante } from './BotaoFlutuante';

@@ -28,6 +28,14 @@ export interface FolhaLancamentoProps {
   aoFechar: () => void;
   /** Opcional: recebe a transacao recem gravada, para toast ou scroll. */
   aoLancar?: (transacao: Transacao) => void;
+  /**
+   * Dia em que o formulario abre. Padrao: hoje.
+   *
+   * Vem preenchido quando a tela de tras ja tem um dia em foco — o calendario
+   * com o 15 selecionado. Nao trava nada: os chips de hoje/ontem e o seletor de
+   * data continuam ali, e trocar e um toque.
+   */
+  dataInicial?: DataISO;
 }
 
 /**
@@ -50,12 +58,18 @@ export interface FolhaLancamentoProps {
  * Monta so quando aberta — assim o estado nasce limpo e o autofoco acontece
  * dentro do gesto do usuario, que e o que o iOS exige para subir o teclado.
  */
-export function FolhaLancamento({ aoFechar, aoLancar }: FolhaLancamentoProps): React.JSX.Element {
+export function FolhaLancamento({
+  aoFechar,
+  aoLancar,
+  dataInicial,
+}: FolhaLancamentoProps): React.JSX.Element {
   const [visivel, setVisivel] = useState(false);
   const [tipo, setTipo] = useState<TipoMovimento>('saida');
   const [valor, setValor] = useState<Centavos>(ZERO);
   const [categoria, setCategoria] = useState<Categoria | null>(null);
-  const [data, setData] = useState<DataISO>(hoje);
+  // Inicializador de uma vez so: `dataInicial` mudar depois nao pode puxar de
+  // volta a data que a pessoa acabou de escolher no formulario.
+  const [data, setData] = useState<DataISO>(() => dataInicial ?? hoje());
   const [descricao, setDescricao] = useState('');
   const [notaAberta, setNotaAberta] = useState(false);
   const [salvando, setSalvando] = useState(false);

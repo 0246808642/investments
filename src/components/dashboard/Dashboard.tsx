@@ -4,6 +4,7 @@ import type * as React from 'react';
 import type { DataISO, MesISO } from '../../types';
 import { mesAtual } from '../../types';
 import { AvisoDeAlerta } from '../alertas';
+import { useDataSugerida } from '../lancamento';
 import { CalendarioMes } from './CalendarioMes';
 import { CartaoEvolucao } from './CartaoEvolucao';
 import { CartaoFluxo } from './CartaoFluxo';
@@ -40,6 +41,14 @@ import { ListaTransacoes } from './ListaTransacoes';
 export function Dashboard(): React.JSX.Element {
   const [mes, setMes] = useState<MesISO>(() => mesAtual());
   const [diaSelecionado, setDiaSelecionado] = useState<DataISO | null>(null);
+
+  /*
+   * O dia selecionado no calendario vira a data com que a folha de lancamento
+   * abre. Fica aqui, e nao dentro do CalendarioMes, porque o dia e estado DESTA
+   * tela: a lista ao lado ja depende dele, e o lancamento e a terceira leitura
+   * do mesmo clique.
+   */
+  useDataSugerida(diaSelecionado);
 
   const trocarMes = (proximo: MesISO): void => {
     setMes(proximo);
