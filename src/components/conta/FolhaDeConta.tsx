@@ -8,6 +8,7 @@ import { useTextos } from '../../i18n';
 import { NOME_DO_APP } from '../../marca';
 import { FormularioDeConta } from './FormularioDeConta';
 import { MarcaDoApp } from './MarcaDoApp';
+import { PainelDeSincronizacao } from './PainelDeSincronizacao';
 import { ANEL_FOCO, BOTAO_TEXTO } from './estilos';
 import { nomeDeExibicao } from '../../api/sessao';
 
@@ -196,6 +197,10 @@ export function FolhaDeConta({ aoFechar, motivo = 'menu' }: FolhaDeContaProps): 
                   <span className="font-medium text-tinta">{nomeDeExibicao(sessao)}</span>.
                 </p>
               </div>
+
+              {/* Antes do "sair nao apaga": quem esta de saida quer saber se o
+                  que ja lancou chegou ao servidor ANTES de sair, nao depois. */}
+              <PainelDeSincronizacao />
 
               <p className="rounded-lg bg-superficie-fundo px-3 py-2.5 text-rotulo text-tinta-suave">
                 {t.conta.sairNaoApaga}

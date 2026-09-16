@@ -44,4 +44,17 @@ public interface IServicoDeIdentidade
         CancellationToken cancellationToken);
 
     Task<ResultadoIdentidade> AutenticarAsync(string email, string senha, CancellationToken cancellationToken);
+
+    /// Emite um token novo para quem JA provou ser quem diz, apresentando um token
+    /// ainda valido. Nao ve senha: a prova de identidade e o Bearer que o pipeline
+    /// de autenticacao ja validou antes do endpoint rodar.
+    ///
+    /// E o que faz a sessao deslizar em vez de morrer na hora marcada. Sem isto o
+    /// token tem prazo fixo desde o login e, no dia do vencimento, quem usa o app
+    /// todo dia e mandado para a tela de login do mesmo jeito que quem sumiu por um
+    /// mes.
+    ///
+    /// Falha quando a conta sumiu entre a emissao e a renovacao — conta apagada
+    /// nao ganha token novo so porque o antigo ainda nao venceu.
+    Task<ResultadoIdentidade> RenovarAsync(UsuarioId usuario, CancellationToken cancellationToken);
 }

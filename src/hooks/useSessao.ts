@@ -6,6 +6,7 @@ import { definirModoLocal } from '../api/modoLocal';
 import type { FalhaApi } from '../api/erros';
 import { ehErroApi } from '../api/erros';
 import { lerSessao, limparSessao, salvarSessaoDeLogin, sessaoExpirada } from '../api/sessao';
+import { sincronizarAgora } from '../api/sincronizador';
 import type { Sessao } from '../db/sincronizacao';
 import type { Textos } from '../i18n';
 import { textosDe, idiomaAtual } from '../i18n';
@@ -83,6 +84,10 @@ export function useSessao(): EstadoDaSessao {
         // Mante-lo ligado manteria o portao aberto depois de um logout futuro,
         // que e exatamente o contrario do que a pessoa escolheu ao entrar.
         definirModoLocal(false);
+        // Entrar e o momento em que passa a haver para onde mandar: o que estava
+        // na fila sobe agora, e o que ja existia na conta desce. Sem isto, um
+        // aparelho novo mostraria a conta vazia ate a proxima escrita local.
+        void sincronizarAgora();
         return { ok: true };
       } catch (erro) {
         if (!ehErroApi(erro)) {

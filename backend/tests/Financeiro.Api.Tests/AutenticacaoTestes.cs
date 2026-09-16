@@ -38,6 +38,49 @@ public class AutenticacaoTestes
     }
 
     [Fact]
+    public async Task RenovarDevolveTokenNovoParaQuemJaTemUmValido()
+    {
+        using var fabrica = new FabricaDeApi();
+        using var cliente = await fabrica.ClienteAutenticadoAsync(Cenario.EmailDeAna, Cenario.Senha, "Ana Souza");
+
+        using var resposta = await cliente.PostAsync(Cenario.Rota("/api/autenticacao/renovar"), content: null);
+
+        Assert.Equal(HttpStatusCode.OK, resposta.StatusCode);
+
+        var corpo = await FabricaDeApi.LerAsync(resposta);
+        Assert.False(string.IsNullOrWhiteSpace(corpo.GetProperty("token").GetString()));
+        Assert.Equal("2026-09-20T11:00:00.000Z", corpo.GetProperty("expiraEm").GetString());
+
+        // O nome volta junto: o app guarda a sessao inteira de novo depois de
+        // renovar, e sem o nome o cabecalho passaria a mostrar o e-mail.
+        Assert.Equal("Ana Souza", corpo.GetProperty("nome").GetString());
+    }
+
+    [Fact]
+    public async Task RenovarSemTokenResponde401()
+    {
+        using var fabrica = new FabricaDeApi();
+        using var cliente = fabrica.CreateClient();
+
+        using var resposta = await cliente.PostAsync(Cenario.Rota("/api/autenticacao/renovar"), content: null);
+
+        // O que prova que a rota nao herdou o AllowAnonymous do grupo de login:
+        // um 200 aqui seria uma fabrica de tokens aberta a internet.
+        Assert.Equal(HttpStatusCode.Unauthorized, resposta.StatusCode);
+    }
+
+    [Fact]
+    public async Task RenovarComTokenSemClaimDeUsuarioResponde401()
+    {
+        using var fabrica = new FabricaDeApi();
+        using var cliente = fabrica.ClienteComToken(fabrica.Identidade.TokenSemClaimDeUsuario());
+
+        using var resposta = await cliente.PostAsync(Cenario.Rota("/api/autenticacao/renovar"), content: null);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, resposta.StatusCode);
+    }
+
+    [Fact]
     public async Task RegistrarComSenhaFracaResponde400ComTodosOsMotivos()
     {
         using var fabrica = new FabricaDeApi();

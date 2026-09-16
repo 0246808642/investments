@@ -25,6 +25,17 @@ public sealed class OpcoesJwt
 
     public string Audiencia { get; set; } = string.Empty;
 
+    // 1 hora e o padrao de quem NAO configurou nada, e e curto de proposito: sem
+    // configuracao explicita, o lado seguro do erro e o token que morre cedo.
+    //
+    // O appsettings sobe isso para 30 dias, e o numero la nao e generosidade: e
+    // quanto tempo alguem pode ficar SEM ABRIR o app antes de precisar logar de
+    // novo. Quem abre o app renova o token pelo /api/autenticacao/renovar, entao
+    // para o usuario ativo este prazo nunca chega. Prazo curto aqui nao protege
+    // ninguem — so manda quem usou o app ontem digitar a senha de novo hoje.
+    //
+    // Nao ha revogacao: token vazado vale ate vencer. E o preco assumido em troca
+    // de nao transformar o login numa tarefa semanal.
     public int MinutosDeValidade { get; set; } = 60;
 
     // Tolerancia de relogio na validacao. O padrao da biblioteca e 5 minutos, o que

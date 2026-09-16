@@ -119,6 +119,28 @@ public sealed partial class ServicoDeIdentidade : IServicoDeIdentidade
             : ResultadoIdentidade.Falha(CredenciaisInvalidas);
     }
 
+    public async Task<ResultadoIdentidade> RenovarAsync(
+        UsuarioId usuario,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (usuario.EhVazio)
+        {
+            return ResultadoIdentidade.Falha(CredenciaisInvalidas);
+        }
+
+        // Busca a conta em vez de reaproveitar as claims do token antigo: o nome
+        // pode ter mudado, e a conta pode ter sido apagada. Renovar em cima do que
+        // o proprio token afirma manteria vivo, indefinidamente, um token de conta
+        // que nao existe mais.
+        var conta = await _gerenciador.FindByIdAsync(usuario.ToString()).ConfigureAwait(false);
+
+        return conta is null
+            ? ResultadoIdentidade.Falha(CredenciaisInvalidas)
+            : EmitirToken(conta);
+    }
+
     // Gerado em tempo de compilacao: a regex e fixa e nao precisa ser interpretada
     // a cada registro.
     [GeneratedRegex(@"\s+")]

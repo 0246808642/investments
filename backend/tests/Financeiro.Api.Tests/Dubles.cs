@@ -237,6 +237,21 @@ internal sealed class ServicoDeIdentidadeFake : IServicoDeIdentidade
                 : ResultadoIdentidade.Falha("Credenciais invalidas."));
     }
 
+    public Task<ResultadoIdentidade> RenovarAsync(UsuarioId usuario, CancellationToken cancellationToken)
+    {
+        // Varre as contas em vez de indexar por UsuarioId porque o duble guarda por
+        // e-mail, que e como o login procura. Sao poucas contas por teste.
+        foreach (var conta in _contas.Values)
+        {
+            if (conta.Usuario == usuario)
+            {
+                return Task.FromResult(Emitir(conta.Usuario, conta.Nome));
+            }
+        }
+
+        return Task.FromResult(ResultadoIdentidade.Falha("Credenciais invalidas."));
+    }
+
     // Token valido, porem SEM a claim de usuario: prova que a API devolve 401 (e
     // nao 500 nem, pior, o dado de alguem) quando o token nao identifica ninguem.
     public string TokenSemClaimDeUsuario() => Assinar(new Dictionary<string, object>(StringComparer.Ordinal)

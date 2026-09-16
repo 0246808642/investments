@@ -185,3 +185,27 @@ export function somarDias(data: DataISO, dias: number): DataISO {
 export function ontem(): DataISO {
   return somarDias(hoje(), -1);
 }
+
+/**
+ * Carimbo de instante (ISO com fuso, como o `agoraISO`) -> "14 de set., 15:42".
+ *
+ * Diferente dos outros formatadores daqui: eles recebem DataISO, que e um dia do
+ * calendario sem hora, e este recebe um MOMENTO — vem do relogio do servidor, no
+ * fim de um ciclo de sincronizacao, e a hora e justamente o que se quer ler.
+ *
+ * Carimbo ilegivel devolve string vazia em vez de "Invalid Date": quem chama
+ * mostra a frase de "nunca sincronizou", que e a leitura certa de um marco que
+ * nao da para ler.
+ */
+export function formatarInstante(iso: string): string {
+  const quando = new Date(iso);
+  if (Number.isNaN(quando.getTime())) {
+    return '';
+  }
+  return formatador('instante', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(quando);
+}

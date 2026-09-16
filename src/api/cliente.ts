@@ -149,6 +149,22 @@ export async function entrarNoServidor(email: string, senha: string): Promise<Re
   });
 }
 
+/**
+ * Troca o token atual por outro com prazo novo.
+ *
+ * `autenticada: true` faz o Bearer entrar e, no 401, faz a sessao cair — que e o
+ * certo aqui: renovacao recusada significa que este token nao vale mais, e
+ * insistir com ele em toda sincronizacao seguinte so gastaria requisicao.
+ */
+export async function renovarNoServidor(): Promise<RespostaTokenFio> {
+  return postar({
+    caminho: '/api/autenticacao/renovar',
+    corpo: {},
+    autenticada: true,
+    ler: lerRespostaToken,
+  });
+}
+
 export async function sincronizarNoServidor(
   requisicao: RequisicaoSincronizacaoFio,
 ): Promise<RespostaSincronizacaoFio> {

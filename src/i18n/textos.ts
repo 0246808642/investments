@@ -277,6 +277,17 @@ const ptBR = {
     modoLocalDetalhe:
       'Seus lançamentos estão guardados só neste aparelho. Entre numa conta para levá-los para outro.',
     voltarAExigirConta: 'Voltar a exigir conta',
+    sincronizacao: 'Sincronização',
+    sincronizando: 'Enviando lançamentos…',
+    tudoSincronizado: 'Tudo que está aqui já foi para o servidor.',
+    esperandoEnvio: (n: number) =>
+      n === 1
+        ? '1 lançamento esperando para subir.'
+        : `${n.toString()} lançamentos esperando para subir.`,
+    sincronizadoEm: (quando: string) => `Último envio em ${quando}.`,
+    nuncaSincronizou: 'Este aparelho ainda não enviou nada.',
+    sessaoCaiu: 'Sua sessão caiu. Entre de novo para voltar a sincronizar.',
+    sincronizarAgora: 'Sincronizar agora',
     erroGenerico: 'Não foi possível concluir. Tente de novo.',
     erroRede: 'Não foi possível falar com o servidor. Verifique a conexão e tente de novo.',
     erroCredenciais: 'E-mail ou senha incorretos.',
@@ -569,6 +580,15 @@ const en: Textos = {
     modoLocalDetalhe:
       'Your entries are stored on this device only. Sign in to an account to take them to another.',
     voltarAExigirConta: 'Require an account again',
+    sincronizacao: 'Sync',
+    sincronizando: 'Uploading entries…',
+    tudoSincronizado: 'Everything here is already on the server.',
+    esperandoEnvio: (n) =>
+      n === 1 ? '1 entry waiting to upload.' : `${n.toString()} entries waiting to upload.`,
+    sincronizadoEm: (quando) => `Last upload at ${quando}.`,
+    nuncaSincronizou: 'This device has not uploaded anything yet.',
+    sessaoCaiu: 'Your session ended. Sign in again to resume syncing.',
+    sincronizarAgora: 'Sync now',
     erroGenerico: 'Could not complete. Try again.',
     erroRede: 'Could not reach the server. Check your connection and try again.',
     erroCredenciais: 'Wrong email or password.',
@@ -853,6 +873,17 @@ const es: Textos = {
     modoLocalDetalhe:
       'Tus movimientos están guardados solo en este dispositivo. Entra en una cuenta para llevarlos a otro.',
     voltarAExigirConta: 'Volver a exigir cuenta',
+    sincronizacao: 'Sincronización',
+    sincronizando: 'Enviando movimientos…',
+    tudoSincronizado: 'Todo lo que está aquí ya llegó al servidor.',
+    esperandoEnvio: (n) =>
+      n === 1
+        ? '1 movimiento esperando para subir.'
+        : `${n.toString()} movimientos esperando para subir.`,
+    sincronizadoEm: (quando) => `Último envío el ${quando}.`,
+    nuncaSincronizou: 'Este aparato todavía no envió nada.',
+    sessaoCaiu: 'Tu sesión terminó. Entra de nuevo para volver a sincronizar.',
+    sincronizarAgora: 'Sincronizar ahora',
     erroGenerico: 'No se pudo completar. Inténtalo de nuevo.',
     erroRede: 'No se pudo contactar con el servidor. Comprueba la conexión e inténtalo de nuevo.',
     erroCredenciais: 'Correo o contraseña incorrectos.',

@@ -1,4 +1,5 @@
 using Financeiro.Api.Erros;
+using Financeiro.Api.Seguranca;
 using Financeiro.Application.Abstracoes;
 using Financeiro.Domain.Comum;
 using Microsoft.AspNetCore.Builder;
@@ -39,6 +40,49 @@ internal static class EndpointsDeAutenticacao
             .Produces<RespostaDeErro>(StatusCodes.Status401Unauthorized);
 
         return grupo;
+    }
+
+    // Mapeada FORA de MapearAutenticacao porque aquele grupo e AllowAnonymous e
+    // este endpoint e o oposto: so entra quem ja tem token valido. Grupo proprio,
+    // com RequireAuthorization, em vez de um AllowAnonymous no grupo brigando com
+    // um RequireAuthorization no endpoint — briga que se resolve por ordem de
+    // metadado, e ordem de metadado nao e lugar de guardar uma regra de acesso.
+    public static RouteGroupBuilder MapearRenovacao(this RouteGroupBuilder grupo)
+    {
+        ArgumentNullException.ThrowIfNull(grupo);
+
+        grupo.MapPost("/renovar", RenovarAsync)
+            .WithName("Renovar")
+            .WithSummary("Troca um token valido por outro com prazo novo.")
+            .Produces<RespostaDeToken>(StatusCodes.Status200OK)
+            .Produces<RespostaDeErro>(StatusCodes.Status401Unauthorized);
+
+        return grupo;
+    }
+
+    private static async Task<IResult> RenovarAsync(
+        HttpContext contexto,
+        IServicoDeIdentidade identidade,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(contexto);
+
+        // Nao le usuario do corpo nem da query: quem esta renovando sai do token,
+        // igual a todo endpoint de dados. Aceitar um id de fora aqui seria emitir
+        // token de qualquer conta para quem tivesse um token de qualquer outra.
+        if (!UsuarioAutenticado.TentarObter(contexto.User, out var usuario))
+        {
+            return ResultadosDeErro.NaoAutenticado(MensagemCredenciaisInvalidas);
+        }
+
+        var resultado = await identidade.RenovarAsync(usuario, cancellationToken).ConfigureAwait(false);
+
+        // 401 e nao 400: renovacao que falha significa que este token nao vale mais
+        // (conta apagada), e a acao do cliente e a mesma do token vencido — entrar
+        // de novo. Um 400 mandaria o app tratar como erro de formulario.
+        return resultado.Sucesso
+            ? Responder(resultado)
+            : ResultadosDeErro.NaoAutenticado(MensagemCredenciaisInvalidas);
     }
 
     private static async Task<IResult> RegistrarAsync(
