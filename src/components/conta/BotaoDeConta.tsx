@@ -6,7 +6,19 @@ import { useAbrirConta } from './useAbrirConta';
 import { nomeDeExibicao } from '../../api/sessao';
 
 interface BotaoDeContaProps {
-  /** 'largo' = linha inteira com e-mail (sidebar); 'compacto' = so o rotulo (barra). */
+  /**
+   * 'largo'    = linha inteira com o nome (sidebar).
+   * 'compacto' = barra superior: SO O ICONE no celular, icone + nome a partir de
+   *              `md`. O nome sai porque na faixa unica do celular ele disputa
+   *              largura com os quatro destinos, e destino ganha de identidade:
+   *              quem esta logado descobre isso abrindo a folha de conta, mas
+   *              quem nao acha "Categorias" nao chega na tela. Deslogado vale o
+   *              mesmo: a palavra "Entrar" custa 50px, que e exatamente o que
+   *              falta para as quatro abas caberem num aparelho de 360px, e o
+   *              app funciona sem conta (modo local) — entrar nao e a porta, e
+   *              uma opcao. O boneco e o sinal universal de conta e o
+   *              `aria-label` continua dizendo "Entrar" por extenso.
+   */
   variante: 'largo' | 'compacto';
   className?: string;
 }
@@ -45,12 +57,13 @@ export function BotaoDeConta({ variante, className = '' }: BotaoDeContaProps): R
         onClick={() => {
           abrir('menu');
         }}
+        aria-label={t.conta.entrar}
         className={`flex items-center gap-2.5 rounded-lg text-sm font-medium text-marca transition-colors hover:bg-marca-suave ${FOCO} ${
           largo ? 'w-full px-3 py-2' : 'px-2.5 py-1.5'
         } ${className}`}
       >
         <Icone />
-        {t.conta.entrar}
+        <span className={largo ? '' : 'hidden md:inline'}>{t.conta.entrar}</span>
       </button>
     );
   }
@@ -68,7 +81,11 @@ export function BotaoDeConta({ variante, className = '' }: BotaoDeContaProps): R
       } ${className}`}
     >
       <Icone />
-      <span className="min-w-0 flex-1 truncate text-left">{nomeDeExibicao(sessao)}</span>
+      <span
+        className={`min-w-0 flex-1 truncate text-left ${largo ? '' : 'hidden md:block'}`}
+      >
+        {nomeDeExibicao(sessao)}
+      </span>
     </button>
   );
 }
