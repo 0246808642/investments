@@ -265,9 +265,16 @@ const ptBR = {
     repitaParaConfirmar: 'Repita a senha para confirmar.',
     suaConta: 'Sua conta',
     conectadoComo: 'Você está conectado como',
-    sairNaoApaga:
-      'Sair não apaga nada deste aparelho — os lançamentos continuam aqui. Só o envio para o servidor para até você entrar de novo.',
+    sairApaga:
+      'Sair apaga os lançamentos deste aparelho. Eles continuam guardados na sua conta e voltam assim que você entrar de novo — aqui não fica nada de quem saiu.',
     sair: 'Sair da conta',
+    saindo: 'Saindo…',
+    pendentesAoSair: (n: number) =>
+      n === 1
+        ? '1 lançamento ainda não subiu para o servidor. Se sair agora, ele some deste aparelho.'
+        : `${n.toString()} lançamentos ainda não subiram para o servidor. Se sair agora, eles somem deste aparelho.`,
+    sairEDescartar: 'Sair e descartar',
+    erroAoSair: 'Não foi possível sair agora. Tente de novo.',
     contaDe: (email: string) => `Conta de ${email}`,
     precisaEntrar: 'Entre na sua conta para registrar lançamentos.',
     usarSemConta: 'Usar sem conta neste aparelho',
@@ -568,9 +575,16 @@ const en: Textos = {
     repitaParaConfirmar: 'Repeat the password to confirm.',
     suaConta: 'Your account',
     conectadoComo: 'You are signed in as',
-    sairNaoApaga:
-      'Signing out deletes nothing from this device — the entries stay here. Only the upload to the server stops until you sign in again.',
+    sairApaga:
+      'Signing out erases the entries from this device. They stay in your account and come back when you sign in again — nothing of yours is left behind here.',
     sair: 'Sign out',
+    saindo: 'Signing out…',
+    pendentesAoSair: (n) =>
+      n === 1
+        ? '1 entry has not reached the server yet. Signing out now deletes it from this device.'
+        : `${n.toString()} entries have not reached the server yet. Signing out now deletes them from this device.`,
+    sairEDescartar: 'Sign out and discard',
+    erroAoSair: 'Could not sign out right now. Try again.',
     contaDe: (email) => `Account of ${email}`,
     precisaEntrar: 'Sign in to record entries.',
     usarSemConta: 'Use without an account on this device',
@@ -861,9 +875,16 @@ const es: Textos = {
     repitaParaConfirmar: 'Repite la contraseña para confirmar.',
     suaConta: 'Tu cuenta',
     conectadoComo: 'Has entrado como',
-    sairNaoApaga:
-      'Salir no borra nada de este dispositivo — los movimientos siguen aquí. Solo se detiene el envío al servidor hasta que vuelvas a entrar.',
+    sairApaga:
+      'Salir borra los movimientos de este dispositivo. Siguen guardados en tu cuenta y vuelven cuando entres de nuevo — aquí no queda nada de quien salió.',
     sair: 'Salir de la cuenta',
+    saindo: 'Saliendo…',
+    pendentesAoSair: (n) =>
+      n === 1
+        ? '1 movimiento todavía no llegó al servidor. Si sales ahora, desaparece de este dispositivo.'
+        : `${n.toString()} movimientos todavía no llegaron al servidor. Si sales ahora, desaparecen de este dispositivo.`,
+    sairEDescartar: 'Salir y descartar',
+    erroAoSair: 'No fue posible salir ahora. Inténtalo de nuevo.',
     contaDe: (email) => `Cuenta de ${email}`,
     precisaEntrar: 'Entra en tu cuenta para registrar movimientos.',
     usarSemConta: 'Usar sin cuenta en este dispositivo',

@@ -7,6 +7,8 @@ import type { FalhaApi } from '../api/erros';
 import { ehErroApi } from '../api/erros';
 import { lerSessao, limparSessao, salvarSessaoDeLogin, sessaoExpirada } from '../api/sessao';
 import { sincronizarAgora } from '../api/sincronizador';
+import { contarPendentes } from '../db/consultas';
+import { assumirDonoDosDados, limparDadosDoAparelho } from '../db/limpeza';
 import type { Sessao } from '../db/sincronizacao';
 import type { Textos } from '../i18n';
 import { textosDe, idiomaAtual } from '../i18n';
@@ -21,6 +23,14 @@ import { textosDe, idiomaAtual } from '../i18n';
  */
 export type ResultadoDeConta = { readonly ok: true } | { readonly ok: false; readonly erros: readonly string[] };
 
+/**
+ * Saida da conta. `ok: false` nao e erro: e a pergunta que falta responder —
+ * sobrou coisa na fila, e sair agora apaga. Quem chama decide se insiste.
+ */
+export type ResultadoDeSaida =
+  | { readonly ok: true }
+  | { readonly ok: false; readonly pendentes: number };
+
 export interface EstadoDaSessao {
   /** Sessao valida, ou null. Vencida nunca chega aqui. */
   sessao: Sessao | null;
@@ -34,7 +44,12 @@ export interface EstadoDaSessao {
     nome: string,
     manterConectado: boolean,
   ) => Promise<ResultadoDeConta>;
-  sair: () => Promise<void>;
+  /**
+   * Sai e apaga os dados deste aparelho. Tenta subir o que falta antes; se algo
+   * ficar para tras (sem rede, por exemplo), devolve `ok: false` em vez de
+   * apagar calado. `descartarPendentes` e a confirmacao de quem ja viu o aviso.
+   */
+  sair: (descartarPendentes?: boolean) => Promise<ResultadoDeSaida>;
 }
 
 /**
@@ -84,6 +99,10 @@ export function useSessao(): EstadoDaSessao {
         // Mante-lo ligado manteria o portao aberto depois de um logout futuro,
         // que e exatamente o contrario do que a pessoa escolheu ao entrar.
         definirModoLocal(false);
+        // Antes de qualquer sincronizacao: se o que esta guardado aqui e de
+        // outra conta, ele sai agora — senao a fila da pessoa anterior subiria
+        // para esta conta no ciclo logo abaixo.
+        await assumirDonoDosDados(email);
         // Entrar e o momento em que passa a haver para onde mandar: o que estava
         // na fila sobe agora, e o que ja existia na conta desce. Sem isto, um
         // aparelho novo mostraria a conta vazia ate a proxima escrita local.
@@ -111,8 +130,24 @@ export function useSessao(): EstadoDaSessao {
     [autenticar],
   );
 
-  const sair = useCallback(async (): Promise<void> => {
+  const sair = useCallback(async (descartarPendentes = false): Promise<ResultadoDeSaida> => {
+    // Uma ultima tentativa de subir o que falta. Tambem serve de barreira: se um
+    // ciclo ja estava no ar, esta chamada espera por ele em vez de abrir outro —
+    // apagar o banco no meio de uma sincronizacao deixaria o cursor gravado
+    // apontando para dados que nao existem mais.
+    await sincronizarAgora();
+
+    const pendentes = await contarPendentes();
+    if (pendentes > 0 && !descartarPendentes) {
+      return { ok: false, pendentes };
+    }
+
+    // Os dados primeiro, a sessao depois. Na ordem inversa, uma falha no meio
+    // deixaria exatamente o estado que este fluxo existe para impedir: ninguem
+    // logado e os lancamentos de quem saiu ainda no aparelho.
+    await limparDadosDoAparelho();
     await limparSessao();
+    return { ok: true };
   }, []);
 
   return { sessao, carregando, autenticado: sessao !== null, entrar, registrar, sair };

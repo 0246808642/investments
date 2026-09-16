@@ -11,6 +11,7 @@ import { MarcaDoApp } from './MarcaDoApp';
 import { PainelDeSincronizacao } from './PainelDeSincronizacao';
 import { ANEL_FOCO, BOTAO_TEXTO } from './estilos';
 import { nomeDeExibicao } from '../../api/sessao';
+import type { ResultadoDeSaida } from '../../hooks/useSessao';
 
 /** Igual a duration-200 das classes; se mudar uma, mude a outra. */
 const DURACAO_SAIDA = 200;
@@ -198,27 +199,120 @@ export function FolhaDeConta({ aoFechar, motivo = 'menu' }: FolhaDeContaProps): 
                 </p>
               </div>
 
-              {/* Antes do "sair nao apaga": quem esta de saida quer saber se o
-                  que ja lancou chegou ao servidor ANTES de sair, nao depois. */}
+              {/* Antes do aviso de saida: agora que sair APAGA, quem esta de
+                  saida precisa ver se o que lancou ja chegou ao servidor —
+                  depois de sair essa pergunta nao tem mais resposta. */}
               <PainelDeSincronizacao />
 
               <p className="rounded-lg bg-superficie-fundo px-3 py-2.5 text-rotulo text-tinta-suave">
-                {t.conta.sairNaoApaga}
+                {t.conta.sairApaga}
               </p>
 
-              <button
-                type="button"
-                onClick={() => {
-                  void sair().then(fechar);
-                }}
-                className={`${BOTAO_TEXTO} w-full border border-superficie-forte py-2.5 text-center`}
-              >
-                {t.conta.sair}
-              </button>
+              <Saida aoSair={sair} aoConcluir={fechar} />
             </div>
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+interface SaidaProps {
+  aoSair: (descartarPendentes?: boolean) => Promise<ResultadoDeSaida>;
+  aoConcluir: () => void;
+}
+
+/**
+ * O botao de sair, com a pergunta que ele as vezes precisa fazer.
+ *
+ * Sair apaga o aparelho, entao o fluxo tenta subir a fila primeiro e so pede
+ * confirmacao quando sobra alguma coisa — que e o caso do metro sem sinal, nao o
+ * caso do dia a dia. Confirmacao em TODO logout treinaria a pessoa a passar por
+ * ela sem ler, e justamente no dia em que houvesse algo a perder.
+ *
+ * O aviso diz QUANTOS lancamentos se perdem, nao "dados nao sincronizados": "3"
+ * e uma quantidade que da para decidir; "dados" nao e.
+ */
+function Saida({ aoSair, aoConcluir }: SaidaProps): React.JSX.Element {
+  const t = useTextos();
+  const [saindo, setSaindo] = useState(false);
+  const [pendentes, setPendentes] = useState<number | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+
+  async function sair(descartarPendentes: boolean): Promise<void> {
+    if (saindo) {
+      return;
+    }
+    setSaindo(true);
+    setErro(null);
+    try {
+      const resultado = await aoSair(descartarPendentes);
+      if (resultado.ok) {
+        aoConcluir();
+        return;
+      }
+      setPendentes(resultado.pendentes);
+    } catch {
+      setErro(t.conta.erroAoSair);
+    } finally {
+      setSaindo(false);
+    }
+  }
+
+  if (pendentes !== null) {
+    return (
+      <div className="space-y-3">
+        <p
+          role="alert"
+          className="rounded-lg border border-saida-borda bg-saida-suave px-3 py-2.5 text-rotulo font-medium text-saida-forte"
+        >
+          {t.conta.pendentesAoSair(pendentes)}
+        </p>
+
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            disabled={saindo}
+            onClick={() => {
+              setPendentes(null);
+            }}
+            className={`${BOTAO_TEXTO} w-full border border-superficie-forte py-2.5 text-center`}
+          >
+            {t.comum.cancelar}
+          </button>
+          <button
+            type="button"
+            disabled={saindo}
+            onClick={() => {
+              void sair(true);
+            }}
+            className={`${BOTAO_TEXTO} w-full border border-saida-borda py-2.5 text-center text-saida-forte`}
+          >
+            {saindo ? t.conta.saindo : t.conta.sairEDescartar}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <button
+        type="button"
+        disabled={saindo}
+        onClick={() => {
+          void sair(false);
+        }}
+        className={`${BOTAO_TEXTO} w-full border border-superficie-forte py-2.5 text-center`}
+      >
+        {saindo ? t.conta.saindo : t.conta.sair}
+      </button>
+
+      {erro === null ? null : (
+        <p role="alert" className="text-rotulo font-medium text-saida">
+          {erro}
+        </p>
+      )}
     </div>
   );
 }

@@ -351,11 +351,27 @@ export async function confirmarEnvio(ids: readonly string[]): Promise<number> {
 
 export async function lerEstadoSincronizacao(): Promise<EstadoSincronizacao> {
   const estado = await db.estadoSincronizacao.get(CHAVE_ESTADO);
-  return estado ?? { chave: CHAVE_ESTADO, proximoDesde: null, proximoUltimoId: null, ultimaSincronizacaoEm: null };
+  return (
+    estado ?? {
+      chave: CHAVE_ESTADO,
+      proximoDesde: null,
+      proximoUltimoId: null,
+      ultimaSincronizacaoEm: null,
+      dono: null,
+    }
+  );
 }
 
-export async function salvarEstadoSincronizacao(estado: Omit<EstadoSincronizacao, 'chave'>): Promise<void> {
-  await db.estadoSincronizacao.put({ ...estado, chave: CHAVE_ESTADO });
+/**
+ * Grava o marco. Os campos ausentes ficam como estavam — e por isso que o ciclo
+ * de sincronizacao pode salvar so o cursor sem apagar o `dono`, que e escrito em
+ * outro momento (na entrada da conta) e tem que sobreviver a todo ciclo.
+ */
+export async function salvarEstadoSincronizacao(
+  estado: Partial<Omit<EstadoSincronizacao, 'chave'>>,
+): Promise<void> {
+  const atual = await lerEstadoSincronizacao();
+  await db.estadoSincronizacao.put({ ...atual, ...estado, chave: CHAVE_ESTADO });
 }
 
 /** Exclusao logica local. Enfileira, porque precisa propagar. */

@@ -32,6 +32,19 @@ export interface EstadoSincronizacao {
   proximoDesde: string | null;
   proximoUltimoId: string | null;
   ultimaSincronizacaoEm: string | null;
+  /**
+   * E-mail da conta a que os dados DESTE aparelho pertencem.
+   *
+   * Existe para o caso que o logout sozinho nao cobre: sessao vencida, ninguem
+   * logado, e outra pessoa entra. Sem esta marca, o que sobrou na fila subiria
+   * para a conta nova — o gasto de um caindo no extrato do outro. Na entrada, o
+   * app compara: dono diferente, banco local zerado antes de sincronizar.
+   *
+   * `null` em duas situacoes legitimas: aparelho que nunca entrou em conta
+   * nenhuma, e quem usou "sem conta" e depois criou a dele. Nos dois casos os
+   * dados locais sao de quem esta entrando, e nada e apagado.
+   */
+  dono?: string | null;
 }
 
 /**
