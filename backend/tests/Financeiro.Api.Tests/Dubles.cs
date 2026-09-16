@@ -175,6 +175,8 @@ internal sealed class ServicoDeIdentidadeFake : IServicoDeIdentidade
 {
     public const int TamanhoMinimoDaSenha = 8;
 
+    public const int TamanhoMinimoDoNome = 2;
+
     private readonly Dictionary<string, (UsuarioId Usuario, string Senha, string? Nome)> _contas =
         new(StringComparer.OrdinalIgnoreCase);
 
@@ -247,6 +249,67 @@ internal sealed class ServicoDeIdentidadeFake : IServicoDeIdentidade
             {
                 return Task.FromResult(Emitir(conta.Usuario, conta.Nome));
             }
+        }
+
+        return Task.FromResult(ResultadoIdentidade.Falha("Credenciais invalidas."));
+    }
+
+    public Task<ResultadoIdentidade> AlterarNomeAsync(
+        UsuarioId usuario,
+        string nome,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(nome);
+
+        var normalizado = nome.Trim();
+        if (normalizado.Length < TamanhoMinimoDoNome)
+        {
+            return Task.FromResult(ResultadoIdentidade.Falha("Nome curto demais."));
+        }
+
+        foreach (var (email, conta) in _contas)
+        {
+            if (conta.Usuario == usuario)
+            {
+                _contas[email] = (conta.Usuario, conta.Senha, normalizado);
+                return Task.FromResult(Emitir(conta.Usuario, normalizado));
+            }
+        }
+
+        return Task.FromResult(ResultadoIdentidade.Falha("Credenciais invalidas."));
+    }
+
+    public Task<ResultadoIdentidade> AlterarSenhaAsync(
+        UsuarioId usuario,
+        string senhaAtual,
+        string senhaNova,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(senhaAtual);
+        ArgumentNullException.ThrowIfNull(senhaNova);
+
+        foreach (var (email, conta) in _contas)
+        {
+            if (conta.Usuario != usuario)
+            {
+                continue;
+            }
+
+            if (!string.Equals(conta.Senha, senhaAtual, StringComparison.Ordinal))
+            {
+                return Task.FromResult(ResultadoIdentidade.Falha("A senha atual nao confere."));
+            }
+
+            if (senhaNova.Length < TamanhoMinimoDaSenha)
+            {
+                return Task.FromResult(ResultadoIdentidade.Falha(
+                    "Senha precisa de pelo menos "
+                        + TamanhoMinimoDaSenha.ToString(CultureInfo.InvariantCulture)
+                        + " caracteres."));
+            }
+
+            _contas[email] = (conta.Usuario, senhaNova, conta.Nome);
+            return Task.FromResult(Emitir(conta.Usuario, conta.Nome));
         }
 
         return Task.FromResult(ResultadoIdentidade.Falha("Credenciais invalidas."));

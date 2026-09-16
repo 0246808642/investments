@@ -21,3 +21,12 @@ internal sealed record RequisicaoDeRegistro(string? Email, string? Senha, string
 // Nome e anulavel: conta criada antes da coluna existir nao tem nome, e o cliente
 // cai para o e-mail nesse caso.
 internal sealed record RespostaDeToken(string Token, string ExpiraEm, string? Nome);
+
+// Alteracao de nome. Contrato proprio, de um campo so: reaproveitar o de registro
+// faria a rota anunciar que le e-mail e senha, que ela nao le — e um cliente que
+// acreditasse no anuncio mandaria credencial por uma rota que a ignora.
+internal sealed record RequisicaoDeNome(string? Nome);
+
+// Alteracao de senha. A atual e obrigatoria mesmo com token valido: token vazado
+// ou aparelho destravado nao podem virar tomada de conta.
+internal sealed record RequisicaoDeSenha(string? SenhaAtual, string? SenhaNova);

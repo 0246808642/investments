@@ -165,6 +165,39 @@ export async function renovarNoServidor(): Promise<RespostaTokenFio> {
   });
 }
 
+/**
+ * Troca o nome de exibicao. Devolve a sessao inteira, com token novo — o nome
+ * viaja na resposta do token, nunca dentro dele.
+ */
+export async function alterarNomeNoServidor(nome: string): Promise<RespostaTokenFio> {
+  return postar({
+    caminho: '/api/autenticacao/nome',
+    corpo: { nome },
+    autenticada: true,
+    ler: lerRespostaToken,
+  });
+}
+
+/**
+ * Troca a senha. A atual vai junto mesmo havendo token: e o que impede que um
+ * aparelho destravado por um minuto vire uma conta perdida.
+ *
+ * O servidor responde 400 (e nao 401) quando a senha atual nao confere, de
+ * proposito: 401 faria `construirErro` derrubar a sessao aqui em cima, e errar a
+ * digitacao de um campo deslogaria a pessoa no meio do formulario.
+ */
+export async function alterarSenhaNoServidor(
+  senhaAtual: string,
+  senhaNova: string,
+): Promise<RespostaTokenFio> {
+  return postar({
+    caminho: '/api/autenticacao/senha',
+    corpo: { senhaAtual, senhaNova },
+    autenticada: true,
+    ler: lerRespostaToken,
+  });
+}
+
 export async function sincronizarNoServidor(
   requisicao: RequisicaoSincronizacaoFio,
 ): Promise<RespostaSincronizacaoFio> {

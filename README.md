@@ -54,15 +54,21 @@ npm run build       # tsc --noEmit && vite build
 npm run typecheck
 
 cd backend
-dotnet test         # 334 testes
+dotnet test         # 350 testes
 dotnet run --project src/Financeiro.Api -- --migrar   # aplica migrations e sai
 ```
 
 ### Trocar a senha de uma conta
 
-Não existe "esqueci minha senha": não há envio de e-mail configurado, e um
-endpoint que troca senha sem provar quem pediu seria pior do que não ter. Quem
-tem a conexão do banco troca pela linha de comando:
+Quem **sabe** a senha atual troca dentro do app, na folha de conta: "Seus dados"
+→ "Alterar senha" (`POST /api/autenticacao/senha`, que exige a senha atual mesmo
+havendo token — aparelho destravado por um minuto não pode virar conta perdida).
+O nome de exibição fica ao lado, no mesmo lugar.
+
+O que não existe é "esqueci minha senha": não há envio de e-mail configurado, e
+um endpoint que troca senha sem provar quem pediu seria pior do que não ter.
+Para esse caso — e só para ele — quem tem a conexão do banco troca pela linha de
+comando:
 
 ```bash
 cd backend/src/Financeiro.Api
@@ -72,7 +78,7 @@ dotnet run -- --redefinir-senha alguem@exemplo.com
 
 # banco de produção — o ambiente Production ignora o appsettings.Development.json,
 # então a conexão vem da DATABASE_URL e nenhum banco é alcançado por engano
-ASPNETCORE_ENVIRONMENT=Production DATABASE_URL="postgres://..."   dotnet run --no-launch-profile -- --redefinir-senha alguem@exemplo.com
+ASPNETCORE_ENVIRONMENT=Production DATABASE_URL="postgres://..." dotnet run --no-launch-profile -- --redefinir-senha alguem@exemplo.com
 ```
 
 Sem a senha no comando ela é lida da entrada padrão, sem eco — assim não fica no

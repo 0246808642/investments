@@ -8,6 +8,7 @@ import { useTextos } from '../../i18n';
 import { NOME_DO_APP } from '../../marca';
 import { FormularioDeConta } from './FormularioDeConta';
 import { MarcaDoApp } from './MarcaDoApp';
+import { PainelDePerfil } from './PainelDePerfil';
 import { PainelDeSincronizacao } from './PainelDeSincronizacao';
 import { ANEL_FOCO, BOTAO_TEXTO } from './estilos';
 import { nomeDeExibicao } from '../../api/sessao';
@@ -198,6 +199,8 @@ export function FolhaDeConta({ aoFechar, motivo = 'menu' }: FolhaDeContaProps): 
                   <span className="font-medium text-tinta">{nomeDeExibicao(sessao)}</span>.
                 </p>
               </div>
+
+              <PainelDePerfil sessao={sessao} />
 
               {/* Antes do aviso de saida: agora que sair APAGA, quem esta de
                   saida precisa ver se o que lancou ja chegou ao servidor —

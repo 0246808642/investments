@@ -81,6 +81,151 @@ public class AutenticacaoTestes
     }
 
     [Fact]
+    public async Task AlterarNomeDevolveSessaoComONomeNovo()
+    {
+        using var fabrica = new FabricaDeApi();
+        using var cliente = await fabrica.ClienteAutenticadoAsync(Cenario.EmailDeAna, Cenario.Senha, "Ana Souza");
+
+        using var resposta = await cliente.PostAsync(
+            Cenario.Rota("/api/autenticacao/nome"),
+            FabricaDeApi.Json("{\"nome\":\"Ana Maria Souza\"}"));
+
+        Assert.Equal(HttpStatusCode.OK, resposta.StatusCode);
+
+        var corpo = await FabricaDeApi.LerAsync(resposta);
+        Assert.Equal("Ana Maria Souza", corpo.GetProperty("nome").GetString());
+
+        // Token novo junto: o app troca a sessao inteira de uma vez, sem remendar
+        // o nome por cima do registro antigo.
+        Assert.False(string.IsNullOrWhiteSpace(corpo.GetProperty("token").GetString()));
+
+        // E o nome novo persiste: renovar depois traz o mesmo, nao o do cadastro.
+        using var renovacao = await cliente.PostAsync(Cenario.Rota("/api/autenticacao/renovar"), content: null);
+        var depois = await FabricaDeApi.LerAsync(renovacao);
+        Assert.Equal("Ana Maria Souza", depois.GetProperty("nome").GetString());
+    }
+
+    [Fact]
+    public async Task AlterarNomeVazioResponde400()
+    {
+        using var fabrica = new FabricaDeApi();
+        using var cliente = await fabrica.ClienteAutenticadoAsync(Cenario.EmailDeAna, Cenario.Senha, "Ana Souza");
+
+        using var resposta = await cliente.PostAsync(
+            Cenario.Rota("/api/autenticacao/nome"),
+            FabricaDeApi.Json("{\"nome\":\"   \"}"));
+
+        // 400 e nao 401: o token esta bom, o dado e que nao — a tela precisa
+        // mostrar o motivo no campo, nao mandar a pessoa entrar de novo.
+        Assert.Equal(HttpStatusCode.BadRequest, resposta.StatusCode);
+    }
+
+    [Fact]
+    public async Task AlterarNomeSemTokenResponde401()
+    {
+        using var fabrica = new FabricaDeApi();
+        using var cliente = fabrica.CreateClient();
+
+        using var resposta = await cliente.PostAsync(
+            Cenario.Rota("/api/autenticacao/nome"),
+            FabricaDeApi.Json("{\"nome\":\"Quem Quiser\"}"));
+
+        Assert.Equal(HttpStatusCode.Unauthorized, resposta.StatusCode);
+    }
+
+    [Fact]
+    public async Task AlterarSenhaTrocaACredencialDeVerdade()
+    {
+        using var fabrica = new FabricaDeApi();
+        using var cliente = await fabrica.ClienteAutenticadoAsync(Cenario.EmailDeAna, Cenario.Senha, "Ana Souza");
+
+        using var troca = await cliente.PostAsync(
+            Cenario.Rota("/api/autenticacao/senha"),
+            FabricaDeApi.Json("{\"senhaAtual\":\"" + Cenario.Senha + "\",\"senhaNova\":\"outra-senha-forte-9\"}"));
+
+        Assert.Equal(HttpStatusCode.OK, troca.StatusCode);
+        Assert.False(string.IsNullOrWhiteSpace((await FabricaDeApi.LerAsync(troca)).GetProperty("token").GetString()));
+
+        using var anonimo = fabrica.CreateClient();
+
+        // A prova de que trocou: a antiga para de entrar e a nova entra.
+        using var comAntiga = await anonimo.PostAsync(
+            Cenario.Rota("/api/autenticacao/login"),
+            FabricaDeApi.Json("{\"email\":\"" + Cenario.EmailDeAna + "\",\"senha\":\"" + Cenario.Senha + "\"}"));
+        Assert.Equal(HttpStatusCode.Unauthorized, comAntiga.StatusCode);
+
+        using var comNova = await anonimo.PostAsync(
+            Cenario.Rota("/api/autenticacao/login"),
+            FabricaDeApi.Json("{\"email\":\"" + Cenario.EmailDeAna + "\",\"senha\":\"outra-senha-forte-9\"}"));
+        Assert.Equal(HttpStatusCode.OK, comNova.StatusCode);
+    }
+
+    [Fact]
+    public async Task AlterarSenhaComAtualErradaResponde400ENaoDerrubaASessao()
+    {
+        using var fabrica = new FabricaDeApi();
+        using var cliente = await fabrica.ClienteAutenticadoAsync(Cenario.EmailDeAna, Cenario.Senha, "Ana Souza");
+
+        using var resposta = await cliente.PostAsync(
+            Cenario.Rota("/api/autenticacao/senha"),
+            FabricaDeApi.Json("{\"senhaAtual\":\"chute-errado\",\"senhaNova\":\"outra-senha-forte-9\"}"));
+
+        // 400 de propósito: com 401 o cliente derruba a sessao (ver o tratamento
+        // de 401 em src/api/cliente.ts), e errar a digitacao de um campo
+        // deslogaria a pessoa.
+        Assert.Equal(HttpStatusCode.BadRequest, resposta.StatusCode);
+
+        var corpo = await FabricaDeApi.LerAsync(resposta);
+        Assert.Contains("atual", corpo.GetProperty("detalhes")[0].GetString(), StringComparison.OrdinalIgnoreCase);
+
+        // A sessao continua de pe: o mesmo token ainda trabalha.
+        using var renovacao = await cliente.PostAsync(Cenario.Rota("/api/autenticacao/renovar"), content: null);
+        Assert.Equal(HttpStatusCode.OK, renovacao.StatusCode);
+    }
+
+    [Fact]
+    public async Task AlterarSenhaParaAMesmaResponde400()
+    {
+        using var fabrica = new FabricaDeApi();
+        using var cliente = await fabrica.ClienteAutenticadoAsync(Cenario.EmailDeAna, Cenario.Senha, "Ana Souza");
+
+        using var resposta = await cliente.PostAsync(
+            Cenario.Rota("/api/autenticacao/senha"),
+            FabricaDeApi.Json("{\"senhaAtual\":\"" + Cenario.Senha + "\",\"senhaNova\":\"" + Cenario.Senha + "\"}"));
+
+        // Sem isto a tela diria "senha alterada" sem nada ter mudado.
+        Assert.Equal(HttpStatusCode.BadRequest, resposta.StatusCode);
+    }
+
+    [Fact]
+    public async Task AlterarSenhaFracaResponde400()
+    {
+        using var fabrica = new FabricaDeApi();
+        using var cliente = await fabrica.ClienteAutenticadoAsync(Cenario.EmailDeAna, Cenario.Senha, "Ana Souza");
+
+        using var resposta = await cliente.PostAsync(
+            Cenario.Rota("/api/autenticacao/senha"),
+            FabricaDeApi.Json("{\"senhaAtual\":\"" + Cenario.Senha + "\",\"senhaNova\":\"123\"}"));
+
+        // A politica do cadastro vale aqui igual: uma porta que aceita senha fraca
+        // anula a regra da outra.
+        Assert.Equal(HttpStatusCode.BadRequest, resposta.StatusCode);
+    }
+
+    [Fact]
+    public async Task AlterarSenhaSemTokenResponde401()
+    {
+        using var fabrica = new FabricaDeApi();
+        using var cliente = fabrica.CreateClient();
+
+        using var resposta = await cliente.PostAsync(
+            Cenario.Rota("/api/autenticacao/senha"),
+            FabricaDeApi.Json("{\"senhaAtual\":\"seja-la\",\"senhaNova\":\"outra-senha-forte-9\"}"));
+
+        Assert.Equal(HttpStatusCode.Unauthorized, resposta.StatusCode);
+    }
+
+    [Fact]
     public async Task RegistrarComSenhaFracaResponde400ComTodosOsMotivos()
     {
         using var fabrica = new FabricaDeApi();

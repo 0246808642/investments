@@ -52,22 +52,9 @@ public sealed partial class ServicoDeIdentidade : IServicoDeIdentidade
 
         var normalizado = email.Trim();
 
-        // Colapsa espacos repetidos alem de aparar as pontas: "Ana   Maria" e
-        // "Ana Maria" sao o mesmo nome, e guardar os dois faria a mesma pessoa
-        // parecer duas na lista de contas.
-        var nomeNormalizado = EspacosRepetidos().Replace((nome ?? string.Empty).Trim(), " ");
-        if (nomeNormalizado.Length < UsuarioDaAplicacao.TamanhoMinimoDoNome)
+        if (!TentarNormalizarNome(nome, out var nomeNormalizado, out var erroDeNome))
         {
-            return ResultadoIdentidade.Falha("Informe um nome com pelo menos "
-                + UsuarioDaAplicacao.TamanhoMinimoDoNome.ToString(CultureInfo.InvariantCulture)
-                + " caracteres.");
-        }
-
-        if (nomeNormalizado.Length > UsuarioDaAplicacao.TamanhoMaximoDoNome)
-        {
-            return ResultadoIdentidade.Falha("O nome passa de "
-                + UsuarioDaAplicacao.TamanhoMaximoDoNome.ToString(CultureInfo.InvariantCulture)
-                + " caracteres.");
+            return ResultadoIdentidade.Falha(erroDeNome);
         }
 
         // UserName = e-mail: o sistema nao tem conceito de apelido, e deixar os dois
@@ -125,20 +112,123 @@ public sealed partial class ServicoDeIdentidade : IServicoDeIdentidade
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (usuario.EhVazio)
-        {
-            return ResultadoIdentidade.Falha(CredenciaisInvalidas);
-        }
-
         // Busca a conta em vez de reaproveitar as claims do token antigo: o nome
         // pode ter mudado, e a conta pode ter sido apagada. Renovar em cima do que
         // o proprio token afirma manteria vivo, indefinidamente, um token de conta
         // que nao existe mais.
-        var conta = await _gerenciador.FindByIdAsync(usuario.ToString()).ConfigureAwait(false);
+        var conta = await BuscarContaAsync(usuario).ConfigureAwait(false);
 
         return conta is null
             ? ResultadoIdentidade.Falha(CredenciaisInvalidas)
             : EmitirToken(conta);
+    }
+
+    public async Task<ResultadoIdentidade> AlterarNomeAsync(
+        UsuarioId usuario,
+        string nome,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var conta = await BuscarContaAsync(usuario).ConfigureAwait(false);
+        if (conta is null)
+        {
+            return ResultadoIdentidade.Falha(CredenciaisInvalidas);
+        }
+
+        if (!TentarNormalizarNome(nome, out var normalizado, out var erro))
+        {
+            return ResultadoIdentidade.Falha(erro);
+        }
+
+        // Mesmo nome: nao escreve. Poupa a ida ao banco e, principalmente, nao
+        // gasta uma versao nova da linha por um clique sem efeito.
+        if (string.Equals(conta.Nome, normalizado, StringComparison.Ordinal))
+        {
+            return EmitirToken(conta);
+        }
+
+        conta.Nome = normalizado;
+
+        var atualizacao = await _gerenciador.UpdateAsync(conta).ConfigureAwait(false);
+        return atualizacao.Succeeded
+            ? EmitirToken(conta)
+            : ResultadoIdentidade.Falha(DescricoesDe(atualizacao));
+    }
+
+    public async Task<ResultadoIdentidade> AlterarSenhaAsync(
+        UsuarioId usuario,
+        string senhaAtual,
+        string senhaNova,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var conta = await BuscarContaAsync(usuario).ConfigureAwait(false);
+        if (conta is null)
+        {
+            return ResultadoIdentidade.Falha(CredenciaisInvalidas);
+        }
+
+        // ChangePasswordAsync e nao um hash escrito na mao: e ele que confere a
+        // senha atual, aplica a politica na nova e roda o carimbo de seguranca —
+        // os tres numa chamada, sem chance de esquecer um dos tres.
+        var troca = await _gerenciador
+            .ChangePasswordAsync(conta, senhaAtual ?? string.Empty, senhaNova ?? string.Empty)
+            .ConfigureAwait(false);
+
+        if (troca.Succeeded)
+        {
+            // Token novo: o antigo continuaria valendo (JWT nao consulta o carimbo
+            // a cada requisicao), mas quem acabou de trocar a senha merece sair
+            // daqui com a sessao mais nova, e nao com a que existia antes.
+            return EmitirToken(conta);
+        }
+
+        // "PasswordMismatch" e o unico erro desta rota que o usuario resolve
+        // sabendo exatamente o que aconteceu — e a mensagem do Identity para ele e
+        // "Incorrect password.", que numa tela em portugues parece erro de sistema.
+        var senhaAtualErrada = troca.Errors.Any(
+            erro => string.Equals(erro.Code, "PasswordMismatch", StringComparison.Ordinal));
+
+        return senhaAtualErrada
+            ? ResultadoIdentidade.Falha("A senha atual nao confere.")
+            : ResultadoIdentidade.Falha(DescricoesDe(troca));
+    }
+
+    private Task<UsuarioDaAplicacao?> BuscarContaAsync(UsuarioId usuario)
+        => usuario.EhVazio
+            ? Task.FromResult<UsuarioDaAplicacao?>(null)
+            : _gerenciador.FindByIdAsync(usuario.ToString());
+
+    /// Apara as pontas e colapsa espacos repetidos: "Ana   Maria" e "Ana Maria"
+    /// sao o mesmo nome, e guardar os dois faria a mesma pessoa parecer duas.
+    ///
+    /// Mora aqui, e nao em cada chamador, porque cadastro e alteracao TEM que
+    /// concordar: um nome recusado no cadastro que passasse na alteracao seria a
+    /// regra valendo so na porta da frente.
+    private static bool TentarNormalizarNome(string? nome, out string normalizado, out string erro)
+    {
+        normalizado = EspacosRepetidos().Replace((nome ?? string.Empty).Trim(), " ");
+
+        if (normalizado.Length < UsuarioDaAplicacao.TamanhoMinimoDoNome)
+        {
+            erro = "Informe um nome com pelo menos "
+                + UsuarioDaAplicacao.TamanhoMinimoDoNome.ToString(CultureInfo.InvariantCulture)
+                + " caracteres.";
+            return false;
+        }
+
+        if (normalizado.Length > UsuarioDaAplicacao.TamanhoMaximoDoNome)
+        {
+            erro = "O nome passa de "
+                + UsuarioDaAplicacao.TamanhoMaximoDoNome.ToString(CultureInfo.InvariantCulture)
+                + " caracteres.";
+            return false;
+        }
+
+        erro = string.Empty;
+        return true;
     }
 
     // Gerado em tempo de compilacao: a regex e fixa e nao precisa ser interpretada

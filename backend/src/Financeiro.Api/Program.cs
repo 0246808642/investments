@@ -144,12 +144,12 @@ app.MapGroup("/api/autenticacao")
     .WithTags("Autenticacao")
     .MapearAutenticacao();
 
-// A renovacao mora no mesmo prefixo, mas em grupo separado: ela e a unica rota de
-// autenticacao que EXIGE token em vez de emitir um do nada.
+// Mesmo prefixo, grupo separado: renovar, trocar o nome e trocar a senha sao as
+// rotas de autenticacao que EXIGEM token em vez de emitir um do nada.
 app.MapGroup("/api/autenticacao")
     .RequireAuthorization()
     .WithTags("Autenticacao")
-    .MapearRenovacao();
+    .MapearContaAutenticada();
 
 // RequireAuthorization no GRUPO, nao endpoint a endpoint: rota nova nasce
 // protegida, e esquecer o atributo deixa de ser uma forma de vazar a base.

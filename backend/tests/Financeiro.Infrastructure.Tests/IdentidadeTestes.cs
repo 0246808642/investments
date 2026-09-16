@@ -318,4 +318,137 @@ public sealed class IdentidadeTestes
         Assert.True(primeiro.Sucesso);
         Assert.True(segundo.Sucesso);
     }
+
+    [Fact]
+    public async Task AlterarNomeGravaONovoEOTokenSeguinteJaTrazEle()
+    {
+        var email = NovoEmail();
+
+        await using var escopo = _banco.CriarEscopo();
+        var servico = escopo.ServiceProvider.GetRequiredService<IServicoDeIdentidade>();
+
+        var registro = await servico.RegistrarAsync(email, SenhaValida, NomeValido, CancellationToken.None);
+        var usuario = registro.Usuario!.Value;
+
+        var troca = await servico.AlterarNomeAsync(usuario, "  Ana   Maria  Souza  ", CancellationToken.None);
+
+        Assert.True(troca.Sucesso);
+        // Passa pela MESMA normalizacao do cadastro: espacos colapsados, pontas
+        // aparadas. Duas portas com regras diferentes seriam duas verdades sobre
+        // como o nome e guardado.
+        Assert.Equal("Ana Maria Souza", troca.Nome);
+
+        var renovado = await servico.RenovarAsync(usuario, CancellationToken.None);
+        Assert.Equal("Ana Maria Souza", renovado.Nome);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("A")]
+    public async Task AlterarNomeRecusaNomeCurtoDemais(string nome)
+    {
+        var email = NovoEmail();
+
+        await using var escopo = _banco.CriarEscopo();
+        var servico = escopo.ServiceProvider.GetRequiredService<IServicoDeIdentidade>();
+
+        var registro = await servico.RegistrarAsync(email, SenhaValida, NomeValido, CancellationToken.None);
+
+        var troca = await servico.AlterarNomeAsync(registro.Usuario!.Value, nome, CancellationToken.None);
+
+        Assert.False(troca.Sucesso);
+
+        // E o nome antigo continua de pe: recusa nao pode apagar o que valia.
+        var renovado = await servico.RenovarAsync(registro.Usuario!.Value, CancellationToken.None);
+        Assert.Equal(NomeValido, renovado.Nome);
+    }
+
+    [Fact]
+    public async Task AlterarSenhaFazAAntigaPararDeEntrarEANovaEntrar()
+    {
+        var email = NovoEmail();
+        const string SenhaNova = "Outra#Forte9";
+
+        await using var escopo = _banco.CriarEscopo();
+        var servico = escopo.ServiceProvider.GetRequiredService<IServicoDeIdentidade>();
+
+        var registro = await servico.RegistrarAsync(email, SenhaValida, NomeValido, CancellationToken.None);
+
+        var troca = await servico.AlterarSenhaAsync(
+            registro.Usuario!.Value,
+            SenhaValida,
+            SenhaNova,
+            CancellationToken.None);
+
+        Assert.True(troca.Sucesso);
+        Assert.False(string.IsNullOrWhiteSpace(troca.Token));
+
+        Assert.False((await servico.AutenticarAsync(email, SenhaValida, CancellationToken.None)).Sucesso);
+        Assert.True((await servico.AutenticarAsync(email, SenhaNova, CancellationToken.None)).Sucesso);
+    }
+
+    [Fact]
+    public async Task AlterarSenhaComAAtualErradaNaoTrocaNada()
+    {
+        var email = NovoEmail();
+
+        await using var escopo = _banco.CriarEscopo();
+        var servico = escopo.ServiceProvider.GetRequiredService<IServicoDeIdentidade>();
+
+        var registro = await servico.RegistrarAsync(email, SenhaValida, NomeValido, CancellationToken.None);
+
+        var troca = await servico.AlterarSenhaAsync(
+            registro.Usuario!.Value,
+            "Senha#Errada9",
+            "Outra#Forte9",
+            CancellationToken.None);
+
+        Assert.False(troca.Sucesso);
+
+        // A mensagem aponta o campo: "Incorrect password." do Identity, numa tela
+        // em portugues, parece erro de sistema em vez de erro de digitacao.
+        Assert.Contains(troca.Erros, erro => erro.Contains("atual", StringComparison.OrdinalIgnoreCase));
+
+        // E a senha de antes continua valendo: tentativa errada nao pode deixar a
+        // conta num estado em que nenhuma das duas entra.
+        Assert.True((await servico.AutenticarAsync(email, SenhaValida, CancellationToken.None)).Sucesso);
+    }
+
+    [Fact]
+    public async Task AlterarSenhaAplicaAPoliticaDoCadastro()
+    {
+        var email = NovoEmail();
+
+        await using var escopo = _banco.CriarEscopo();
+        var servico = escopo.ServiceProvider.GetRequiredService<IServicoDeIdentidade>();
+
+        var registro = await servico.RegistrarAsync(email, SenhaValida, NomeValido, CancellationToken.None);
+
+        var troca = await servico.AlterarSenhaAsync(
+            registro.Usuario!.Value,
+            SenhaValida,
+            "123",
+            CancellationToken.None);
+
+        Assert.False(troca.Sucesso);
+        Assert.NotEmpty(troca.Erros);
+
+        // Recusou a fraca E manteve a que existia — a conta nao pode ficar sem
+        // senha valida por causa de uma tentativa recusada.
+        Assert.True((await servico.AutenticarAsync(email, SenhaValida, CancellationToken.None)).Sucesso);
+    }
+
+    [Fact]
+    public async Task AlterarContaDeUsuarioInexistenteFalha()
+    {
+        await using var escopo = _banco.CriarEscopo();
+        var servico = escopo.ServiceProvider.GetRequiredService<IServicoDeIdentidade>();
+
+        var fantasma = UsuarioId.Novo();
+
+        Assert.False((await servico.AlterarNomeAsync(fantasma, "Nome Novo", CancellationToken.None)).Sucesso);
+        Assert.False(
+            (await servico.AlterarSenhaAsync(fantasma, SenhaValida, "Outra#Forte9", CancellationToken.None)).Sucesso);
+    }
 }

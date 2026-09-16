@@ -1,11 +1,16 @@
 import { useCallback, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 
-import { entrarNoServidor, registrarNoServidor } from '../api/cliente';
+import {
+  alterarNomeNoServidor,
+  alterarSenhaNoServidor,
+  entrarNoServidor,
+  registrarNoServidor,
+} from '../api/cliente';
 import { definirModoLocal } from '../api/modoLocal';
 import type { FalhaApi } from '../api/erros';
 import { ehErroApi } from '../api/erros';
-import { lerSessao, limparSessao, salvarSessaoDeLogin, sessaoExpirada } from '../api/sessao';
+import { lerSessao, limparSessao, salvarSessao, salvarSessaoDeLogin, sessaoExpirada } from '../api/sessao';
 import { sincronizarAgora } from '../api/sincronizador';
 import { contarPendentes } from '../db/consultas';
 import { assumirDonoDosDados, limparDadosDoAparelho } from '../db/limpeza';
@@ -49,6 +54,10 @@ export interface EstadoDaSessao {
    * ficar para tras (sem rede, por exemplo), devolve `ok: false` em vez de
    * apagar calado. `descartarPendentes` e a confirmacao de quem ja viu o aviso.
    */
+  /** Troca o nome de exibicao. A sessao guardada aqui ja sai com o nome novo. */
+  alterarNome: (nome: string) => Promise<ResultadoDeConta>;
+  /** Troca a senha. A atual e exigida — token valido nao substitui saber a senha. */
+  alterarSenha: (senhaAtual: string, senhaNova: string) => Promise<ResultadoDeConta>;
   sair: (descartarPendentes?: boolean) => Promise<ResultadoDeSaida>;
 }
 
@@ -130,6 +139,60 @@ export function useSessao(): EstadoDaSessao {
     [autenticar],
   );
 
+  /**
+   * Regrava a sessao com o que o servidor devolveu.
+   *
+   * O e-mail e o "manter conectado" vem do registro atual, e nao da resposta: o
+   * servidor nao tem opiniao sobre eles. Reescrever `persistente` com um padrao
+   * aqui transformaria "so nesta janela" em "para sempre" por causa de uma troca
+   * de nome — o mesmo cuidado que a renovacao ja toma.
+   */
+  const guardarSessaoAtualizada = useCallback(
+    async (resposta: { token: string; expiraEm: string; nome: string | null }): Promise<void> => {
+      const atual = await lerSessao();
+      if (atual === null) {
+        return;
+      }
+      await salvarSessao({
+        token: resposta.token,
+        expiraEm: resposta.expiraEm,
+        email: atual.email,
+        nome: resposta.nome,
+        persistente: atual.persistente ?? true,
+      });
+    },
+    [],
+  );
+
+  /** Mesma forma de entrar/registrar: erro previsto vira lista de mensagens. */
+  const alterar = useCallback(
+    async (
+      chamar: () => Promise<{ token: string; expiraEm: string; nome: string | null }>,
+    ): Promise<ResultadoDeConta> => {
+      try {
+        await guardarSessaoAtualizada(await chamar());
+        return { ok: true };
+      } catch (erro) {
+        if (!ehErroApi(erro)) {
+          throw erro;
+        }
+        return { ok: false, erros: mensagensDe(erro.falha, textosDe(idiomaAtual())) };
+      }
+    },
+    [guardarSessaoAtualizada],
+  );
+
+  const alterarNome = useCallback(
+    (nome: string) => alterar(() => alterarNomeNoServidor(nome)),
+    [alterar],
+  );
+
+  const alterarSenha = useCallback(
+    (senhaAtual: string, senhaNova: string) =>
+      alterar(() => alterarSenhaNoServidor(senhaAtual, senhaNova)),
+    [alterar],
+  );
+
   const sair = useCallback(async (descartarPendentes = false): Promise<ResultadoDeSaida> => {
     // Uma ultima tentativa de subir o que falta. Tambem serve de barreira: se um
     // ciclo ja estava no ar, esta chamada espera por ele em vez de abrir outro —
@@ -150,7 +213,16 @@ export function useSessao(): EstadoDaSessao {
     return { ok: true };
   }, []);
 
-  return { sessao, carregando, autenticado: sessao !== null, entrar, registrar, sair };
+  return {
+    sessao,
+    carregando,
+    autenticado: sessao !== null,
+    entrar,
+    registrar,
+    alterarNome,
+    alterarSenha,
+    sair,
+  };
 }
 
 /**

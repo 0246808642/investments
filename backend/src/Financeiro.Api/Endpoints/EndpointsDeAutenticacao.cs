@@ -16,6 +16,12 @@ internal static class EndpointsDeAutenticacao
     public const string MensagemNomeObrigatorio =
         "Informe o nome.";
 
+    public const string MensagemSenhasObrigatorias =
+        "Informe a senha atual e a nova.";
+
+    public const string MensagemSenhaIgual =
+        "A senha nova precisa ser diferente da atual.";
+
     // Mensagem UNICA para "email nao existe" e "senha errada". Diferenciar as duas
     // transforma o login num verificador de cadastro: quem tem a lista de e-mails
     // descobre quais sao clientes sem acertar nenhuma senha.
@@ -42,12 +48,12 @@ internal static class EndpointsDeAutenticacao
         return grupo;
     }
 
-    // Mapeada FORA de MapearAutenticacao porque aquele grupo e AllowAnonymous e
-    // este endpoint e o oposto: so entra quem ja tem token valido. Grupo proprio,
+    // Mapeadas FORA de MapearAutenticacao porque aquele grupo e AllowAnonymous e
+    // estas rotas sao o oposto: so entra quem ja tem token valido. Grupo proprio,
     // com RequireAuthorization, em vez de um AllowAnonymous no grupo brigando com
     // um RequireAuthorization no endpoint — briga que se resolve por ordem de
     // metadado, e ordem de metadado nao e lugar de guardar uma regra de acesso.
-    public static RouteGroupBuilder MapearRenovacao(this RouteGroupBuilder grupo)
+    public static RouteGroupBuilder MapearContaAutenticada(this RouteGroupBuilder grupo)
     {
         ArgumentNullException.ThrowIfNull(grupo);
 
@@ -57,7 +63,91 @@ internal static class EndpointsDeAutenticacao
             .Produces<RespostaDeToken>(StatusCodes.Status200OK)
             .Produces<RespostaDeErro>(StatusCodes.Status401Unauthorized);
 
+        grupo.MapPost("/nome", AlterarNomeAsync)
+            .WithName("AlterarNome")
+            .WithSummary("Troca o nome de exibicao e devolve a sessao atualizada.")
+            .Produces<RespostaDeToken>(StatusCodes.Status200OK)
+            .Produces<RespostaDeErro>(StatusCodes.Status400BadRequest)
+            .Produces<RespostaDeErro>(StatusCodes.Status401Unauthorized);
+
+        grupo.MapPost("/senha", AlterarSenhaAsync)
+            .WithName("AlterarSenha")
+            .WithSummary("Troca a senha, conferindo a atual, e devolve a sessao atualizada.")
+            .Produces<RespostaDeToken>(StatusCodes.Status200OK)
+            .Produces<RespostaDeErro>(StatusCodes.Status400BadRequest)
+            .Produces<RespostaDeErro>(StatusCodes.Status401Unauthorized);
+
         return grupo;
+    }
+
+    private static async Task<IResult> AlterarNomeAsync(
+        RequisicaoDeNome? requisicao,
+        HttpContext contexto,
+        IServicoDeIdentidade identidade,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(contexto);
+
+        if (!UsuarioAutenticado.TentarObter(contexto.User, out var usuario))
+        {
+            return ResultadosDeErro.NaoAutenticado(MensagemCredenciaisInvalidas);
+        }
+
+        if (requisicao is null || string.IsNullOrWhiteSpace(requisicao.Nome))
+        {
+            return ResultadosDeErro.Invalido(MensagemNomeObrigatorio);
+        }
+
+        var resultado = await identidade
+            .AlterarNomeAsync(usuario, requisicao.Nome, cancellationToken)
+            .ConfigureAwait(false);
+
+        // 400 e nao 401: quem chegou ate aqui tem token valido, entao a falha e do
+        // dado enviado (nome curto, nome longo demais) e a tela precisa mostrar o
+        // motivo no formulario, nao mandar a pessoa entrar de novo.
+        return resultado.Sucesso
+            ? Responder(resultado)
+            : ResultadosDeErro.Invalido("Nao foi possivel alterar o nome.", resultado.Erros);
+    }
+
+    private static async Task<IResult> AlterarSenhaAsync(
+        RequisicaoDeSenha? requisicao,
+        HttpContext contexto,
+        IServicoDeIdentidade identidade,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(contexto);
+
+        if (!UsuarioAutenticado.TentarObter(contexto.User, out var usuario))
+        {
+            return ResultadosDeErro.NaoAutenticado(MensagemCredenciaisInvalidas);
+        }
+
+        if (requisicao is null
+            || string.IsNullOrEmpty(requisicao.SenhaAtual)
+            || string.IsNullOrEmpty(requisicao.SenhaNova))
+        {
+            return ResultadosDeErro.Invalido(MensagemSenhasObrigatorias);
+        }
+
+        // Barrado aqui e nao no servico: o Identity aceitaria trocar uma senha por
+        // ela mesma sem reclamar, e a tela diria "senha alterada" sem nada ter
+        // mudado — a pessoa sairia achando que trocou.
+        if (string.Equals(requisicao.SenhaAtual, requisicao.SenhaNova, StringComparison.Ordinal))
+        {
+            return ResultadosDeErro.Invalido(MensagemSenhaIgual);
+        }
+
+        var resultado = await identidade
+            .AlterarSenhaAsync(usuario, requisicao.SenhaAtual, requisicao.SenhaNova, cancellationToken)
+            .ConfigureAwait(false);
+
+        // Senha atual errada tambem e 400, e nao 401: 401 faz o cliente derrubar a
+        // sessao (ver o tratamento de 401 em src/api/cliente.ts), e quem so errou a
+        // digitacao do campo seria deslogado por causa de um erro de formulario.
+        return resultado.Sucesso
+            ? Responder(resultado)
+            : ResultadosDeErro.Invalido("Nao foi possivel alterar a senha.", resultado.Erros);
     }
 
     private static async Task<IResult> RenovarAsync(

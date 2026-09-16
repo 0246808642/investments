@@ -57,4 +57,31 @@ public interface IServicoDeIdentidade
     /// Falha quando a conta sumiu entre a emissao e a renovacao — conta apagada
     /// nao ganha token novo so porque o antigo ainda nao venceu.
     Task<ResultadoIdentidade> RenovarAsync(UsuarioId usuario, CancellationToken cancellationToken);
+
+    /// Troca o nome de exibicao de quem ja esta autenticado.
+    ///
+    /// Devolve token novo, e nao um 204: o nome viaja na RESPOSTA do token (nunca
+    /// dentro dele), e o cliente guarda a sessao inteira num registro so. Sem
+    /// token novo, o app teria que costurar o nome novo por cima da sessao antiga
+    /// — e um esquecimento nesse remendo deixa a tela mostrando o nome velho ate
+    /// o proximo login.
+    Task<ResultadoIdentidade> AlterarNomeAsync(
+        UsuarioId usuario,
+        string nome,
+        CancellationToken cancellationToken);
+
+    /// Troca a senha de quem ja esta autenticado, exigindo a atual.
+    ///
+    /// A senha atual e pedida mesmo havendo token valido: token vazado ou aparelho
+    /// emprestado e destravado nao podem virar tomada de conta. Com a exigencia,
+    /// quem nao sabe a senha nao consegue trocar a senha — que e a unica coisa que
+    /// impede o dono legitimo de recuperar o acesso depois.
+    ///
+    /// A politica de senha do cadastro vale aqui igual: uma porta que aceita senha
+    /// fraca anula a regra da outra.
+    Task<ResultadoIdentidade> AlterarSenhaAsync(
+        UsuarioId usuario,
+        string senhaAtual,
+        string senhaNova,
+        CancellationToken cancellationToken);
 }

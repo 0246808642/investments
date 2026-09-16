@@ -8,3 +8,4 @@ export { FormularioDeConta } from './FormularioDeConta';
 export type { FormularioDeContaProps, ModoDeConta } from './FormularioDeConta';
 export { BotaoDeConta } from './BotaoDeConta';
 export { PainelDeSincronizacao } from './PainelDeSincronizacao';
+export { PainelDePerfil } from './PainelDePerfil';
