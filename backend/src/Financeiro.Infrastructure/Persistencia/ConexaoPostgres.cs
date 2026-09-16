@@ -54,6 +54,18 @@ public static class ConexaoPostgres
             + "default silencioso apontaria a aplicacao para o banco errado.");
     }
 
+    // "host/banco", sem usuario e sem senha. Serve para o comando de manutencao
+    // dizer em voz alta em qual banco ele vai mexer antes de mexer: a mesma
+    // maquina alcanca o Postgres do docker e o de producao, e "achei que estava
+    // apontando para o outro" e o erro que nao da para desfazer.
+    public static string Descrever(string conexao)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(conexao);
+
+        var construtor = new NpgsqlConnectionStringBuilder(conexao);
+        return construtor.Host + "/" + construtor.Database;
+    }
+
     // postgres://usuario:senha@host/banco?sslmode=require
     //   -> Host=host;Port=5432;Database=banco;Username=usuario;Password=senha;SSL Mode=Require
     public static string ConverterUrl(string url)

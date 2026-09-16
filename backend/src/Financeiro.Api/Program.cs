@@ -5,6 +5,7 @@ using Financeiro.Api.Openapi;
 using Financeiro.Api.Seguranca;
 using Financeiro.Application.Transacoes.CasosDeUso;
 using Financeiro.Infrastructure;
+using Financeiro.Infrastructure.Persistencia;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -23,7 +24,17 @@ builder.Services.TryAddScoped<RegistrarTransacao>();
 builder.Services.TryAddScoped<ListarTransacoesPorPeriodo>();
 builder.Services.TryAddScoped<ExcluirTransacao>();
 
-builder.Services.AdicionarAutenticacaoJwt(builder.Configuration);
+// Comando de manutencao nao emite nem valida token, entao nao exige Jwt:Chave.
+// Sem esta condicao, trocar uma senha contra o banco de producao a partir de uma
+// maquina de desenvolvimento pediria tambem o segredo de assinatura — uma
+// variavel que nao tem nada a ver com a tarefa, e que so seria inventada na hora
+// para o processo subir.
+var manutencao = args.Contains("--migrar") || args.Contains("--redefinir-senha");
+
+if (!manutencao)
+{
+    builder.Services.AdicionarAutenticacaoJwt(builder.Configuration);
+}
 
 builder.Services.ConfigureHttpJsonOptions(opcoes => ConfiguracaoDeJson.Aplicar(opcoes.SerializerOptions));
 
@@ -52,6 +63,44 @@ var app = builder.Build();
 if (args.Contains("--migrar"))
 {
     await AplicadorDeMigracoes.AplicarAsync(app.Services);
+    return;
+}
+
+// Manutencao manual: troca a senha de uma conta e encerra, sem abrir porta.
+//
+//   dotnet run -- --redefinir-senha <e-mail> [senha]
+//
+// Sem a senha no comando, ela e lida da entrada padrao — assim ela nao fica no
+// historico do shell nem na lista de processos da maquina. Existe porque nao ha
+// "esqueci minha senha" no app (nao ha envio de e-mail configurado); ver o
+// cabecalho de RedefinidorDeSenha.
+if (args.Contains("--redefinir-senha"))
+{
+    var posicao = Array.IndexOf(args, "--redefinir-senha");
+    var email = posicao + 1 < args.Length ? args[posicao + 1] : null;
+    var senha = posicao + 2 < args.Length ? args[posicao + 2] : LerSenhaDaEntrada();
+
+    if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(senha))
+    {
+        await Console.Error.WriteLineAsync("Uso: --redefinir-senha <e-mail> [senha]");
+        Environment.ExitCode = 1;
+        return;
+    }
+
+    // Diz o banco ANTES de escrever: a mesma maquina alcanca o Postgres local e o
+    // de producao, e a diferenca entre eles nao aparece em lugar nenhum da saida.
+    await Console.Error.WriteLineAsync(
+        "Banco: " + ConexaoPostgres.Descrever(ConexaoPostgres.Resolver(builder.Configuration)));
+
+    var resultado = await RedefinidorDeSenha.RedefinirAsync(app.Services, email, senha);
+
+    foreach (var aviso in resultado.Avisos)
+    {
+        await Console.Error.WriteLineAsync("Aviso: a senha nova nao atende a politica do cadastro — " + aviso);
+    }
+
+    await Console.Out.WriteLineAsync(resultado.Mensagem);
+    Environment.ExitCode = resultado.Ok ? 0 : 1;
     return;
 }
 
@@ -112,6 +161,41 @@ dados.MapearSincronizacao();
 dados.MapearTransacoes();
 
 app.Run();
+
+// Le a senha sem eco. Terminal redirecionado (pipe) cai no ReadLine normal: sem
+// console de verdade, Console.ReadKey lanca.
+static string? LerSenhaDaEntrada()
+{
+    Console.Error.Write("Senha nova: ");
+    if (Console.IsInputRedirected)
+    {
+        return Console.ReadLine();
+    }
+
+    var digitado = new System.Text.StringBuilder();
+    while (true)
+    {
+        var tecla = Console.ReadKey(intercept: true);
+        if (tecla.Key == ConsoleKey.Enter)
+        {
+            Console.Error.WriteLine();
+            break;
+        }
+
+        if (tecla.Key == ConsoleKey.Backspace)
+        {
+            if (digitado.Length > 0)
+            {
+                digitado.Length -= 1;
+            }
+            continue;
+        }
+
+        digitado.Append(tecla.KeyChar);
+    }
+
+    return digitado.ToString();
+}
 
 // Exposto para os testes de integracao (WebApplicationFactory<Program>).
 public partial class Program;
